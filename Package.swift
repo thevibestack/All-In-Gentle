@@ -45,5 +45,10 @@ let package = Package(
             dependencies: ["AllInGentleKit"],
             path: "Tests/ServicesTokensTests"
         ),
+        .testTarget(
+            name: "ChatSessionCleanerTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/ChatSessionCleanerTests"
+        ),
     ]
 )
