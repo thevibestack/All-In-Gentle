@@ -23,6 +23,11 @@ let package = Package(
             name: "ModelsTests",
             dependencies: ["AllInGentleKit"],
             path: "Tests/ModelsTests"
+        ),
+        .testTarget(
+            name: "ClientTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/ClientTests"
         )
     ]
 )
