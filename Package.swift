@@ -28,6 +28,12 @@ let package = Package(
             name: "ClientTests",
             dependencies: ["AllInGentleKit"],
             path: "Tests/ClientTests"
+        ),
+        .testTarget(
+            name: "LLMServiceTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/LLMServiceTests",
+            resources: [.process("Fixtures")]
         )
     ]
 )
