@@ -1,0 +1,28 @@
+// swift-tools-version:6.0
+import PackageDescription
+
+let package = Package(
+    name: "All-In-Gentle",
+    platforms: [.macOS(.v15)],
+    products: [
+        .library(name: "AllInGentleKit", targets: ["AllInGentleKit"]),
+        .executable(name: "AllInGentle", targets: ["AllInGentle"])
+    ],
+    dependencies: [],
+    targets: [
+        .target(
+            name: "AllInGentleKit",
+            path: "Sources/AllInGentle"
+        ),
+        .executableTarget(
+            name: "AllInGentle",
+            dependencies: ["AllInGentleKit"],
+            path: "Sources/AllInGentleApp"
+        ),
+        .testTarget(
+            name: "ModelsTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/ModelsTests"
+        )
+    ]
+)
