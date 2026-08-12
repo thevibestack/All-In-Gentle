@@ -55,6 +55,25 @@ public actor EngramClient {
         return all.filter { $0.project == project }
     }
 
+    public func projects() async throws -> [Project] {
+        try await projects(limit: 1000)
+    }
+
+    public func projects(limit: Int = 1000) async throws -> [Project] {
+        let observations = try await search(query: "", limit: limit)
+        let projectNames = observations.compactMap(\.project)
+        let unique = Set(projectNames)
+        return unique.sorted().map { name in
+            Project(
+                id: name,
+                name: name,
+                path: name,
+                source: .engram,
+                lastModified: nil
+            )
+        }
+    }
+
     private func parseObservations(_ data: Data) throws -> [MemoryObservation] {
         let raw = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
         return raw.compactMap { item in

@@ -34,6 +34,11 @@ let package = Package(
             dependencies: ["AllInGentleKit"],
             path: "Tests/LLMServiceTests",
             resources: [.process("Fixtures")]
-        )
+        ),
+        .testTarget(
+            name: "ProjectsWikiTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/ProjectsWikiTests"
+        ),
     ]
 )
