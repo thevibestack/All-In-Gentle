@@ -9,6 +9,7 @@ struct WikiView: View {
         } detail: {
             detailPane
         }
+        .navigationTitle(L("wiki.title"))
         .task { await viewModel.loadDocuments() }
     }
 
@@ -22,7 +23,7 @@ struct WikiView: View {
     }
 
     private var searchField: some View {
-        TextField("Search memories", text: $viewModel.searchQuery)
+        TextField(L("wiki.search"), text: $viewModel.searchQuery)
             .textFieldStyle(.roundedBorder)
             .padding()
     }
@@ -57,7 +58,7 @@ struct WikiView: View {
     private var detailPane: some View {
         ScrollView {
             if viewModel.previewText.isEmpty {
-                Text("Select an OpenSpec document to preview")
+                Text(L("wiki.preview"))
                     .foregroundStyle(.secondary)
                     .padding()
             } else {

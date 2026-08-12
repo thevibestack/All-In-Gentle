@@ -11,10 +11,10 @@ struct ChatView: View {
                 Divider()
                 inputBar
             }
-            .navigationTitle("Chat")
+            .navigationTitle(L("chat.title"))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    placeholderButton(title: "Provider")
+                    placeholderButton(title: L("chat.provider"))
                 }
             }
         }
@@ -36,7 +36,7 @@ struct ChatView: View {
             }
             .overlay {
                 if viewModel.messages.isEmpty {
-                    Text("Start a conversation")
+                    Text(L("chat.start"))
                         .foregroundStyle(.secondary)
                         .padding()
                 }
@@ -46,7 +46,7 @@ struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 12) {
-            TextField("Message", text: $viewModel.input, axis: .vertical)
+            TextField(L("chat.message"), text: $viewModel.input, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...5)
                 .focused($isInputFocused)
@@ -72,13 +72,7 @@ struct ChatView: View {
         Button(action: {}) {
             HStack(spacing: 6) {
                 Text(title)
-                Text("Próximamente")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .clipShape(Capsule())
+                InteractionStateBadge(state: .placeholder)
             }
         }
     }
