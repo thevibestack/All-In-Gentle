@@ -54,6 +54,7 @@
 "tokens.empty.message" = "Token usage will appear once conversations are recorded.";
 "chat.empty.title" = "No messages";
 "chat.empty.message" = "Type a message to start the conversation.";
+"chat.error.noProvider" = "No AI provider configured. Open Settings (⌘,) and add a provider under AI.";
 "sessionCleaner.empty.message" = "No sessions to clean up.";
 "badge.live" = "Live";
 "badge.placeholder" = "Coming soon";

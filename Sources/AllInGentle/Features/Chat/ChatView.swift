@@ -103,10 +103,7 @@ private struct MessageRow: View {
         HStack(spacing: 0) {
             if message.role == .assistant {
                 AGCard {
-                    Text(message.content)
-                        .font(AGTypography.body)
-                        .foregroundStyle(AGColors.textPrimary)
-                        .textSelection(.enabled)
+                    MarkdownText(message.content)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Spacer()

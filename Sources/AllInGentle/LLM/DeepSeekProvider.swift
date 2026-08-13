@@ -2,26 +2,39 @@ import Foundation
 
 /// DeepSeek adapter implementing ``LLMService`` via OpenAI-compatible SSE streaming.
 public actor DeepSeekProvider: LLMService {
-    /// Keychain account string used to store the DeepSeek API key.
-    public static let apiKeyKey = "all-in-gentle.deepseek-api-key"
-
-    private let baseURL: URL
+    private let configuration: LLMProviderConfiguration
     private let urlSession: URLSession
-    private let keychain: KeychainStore
+    private let keychain: any KeychainStoring
 
     public init(
-        baseURL: URL = URL(string: "https://api.deepseek.com")!,
+        configuration: LLMProviderConfiguration,
         urlSession: URLSession = .shared,
-        keychain: KeychainStore = KeychainStore()
+        keychain: any KeychainStoring
     ) {
-        self.baseURL = baseURL
+        self.configuration = configuration
         self.urlSession = urlSession
         self.keychain = keychain
     }
 
     public func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
-        guard let apiKey = await keychain.load(key: Self.apiKeyKey), !apiKey.isEmpty else {
-            throw AllInGentleError.invalidConfiguration("DeepSeek API key not found in keychain")
+        guard let apiKey = await keychain.load(key: configuration.apiKeyAccount), !apiKey.isEmpty else {
+            throw AllInGentleError.invalidConfiguration(
+                "API key not found in keychain for provider '\(configuration.displayName)'"
+            )
+        }
+
+        guard let baseURL = URL(string: configuration.baseURL) else {
+            throw AllInGentleError.invalidConfiguration(
+                "Invalid base URL for provider '\(configuration.displayName)': \(configuration.baseURL)"
+            )
+        }
+
+        var requestMessages = messages
+        if let systemPrompt = configuration.systemPrompt, !systemPrompt.isEmpty {
+            requestMessages.insert(
+                ChatMessage(id: UUID().uuidString, role: .system, content: systemPrompt),
+                at: 0
+            )
         }
 
         let url = baseURL.appendingPathComponent("chat/completions")
@@ -32,11 +45,15 @@ public actor DeepSeekProvider: LLMService {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
             let body = RequestBody(
-                model: "deepseek-chat",
-                messages: messages.map { RequestBody.Message(role: $0.role.rawValue, content: $0.content) },
-                stream: true
+                model: configuration.model,
+                messages: requestMessages.map { RequestBody.Message(role: $0.role.rawValue, content: $0.content) },
+                stream: true,
+                temperature: configuration.temperature,
+                maxTokens: configuration.maxTokens
             )
-            request.httpBody = try? JSONEncoder().encode(body)
+            let encoder = JSONEncoder()
+            encoder.keyEncodingStrategy = .convertToSnakeCase
+            request.httpBody = try? encoder.encode(body)
             return request
         }()
 
@@ -89,6 +106,8 @@ private struct RequestBody: Encodable, Sendable {
     let model: String
     let messages: [Message]
     let stream: Bool
+    let temperature: Double?
+    let maxTokens: Int?
 
     struct Message: Encodable, Sendable {
         let role: String

@@ -65,7 +65,8 @@ public struct LLMProviderConfiguration: Codable, Identifiable, Sendable, Equatab
     /// A DeepSeek configuration with the defaults used in v1.
     public static func deepseekDefault(
         id: String = "deepseek",
-        apiKeyReference: String = keychainAccount(for: "deepseek")
+        apiKeyReference: String = keychainAccount(for: "deepseek"),
+        systemPrompt: String? = nil
     ) -> LLMProviderConfiguration {
         LLMProviderConfiguration(
             id: id,
@@ -74,6 +75,7 @@ public struct LLMProviderConfiguration: Codable, Identifiable, Sendable, Equatab
             baseURL: "https://api.deepseek.com",
             model: "deepseek-chat",
             temperature: 0.7,
+            systemPrompt: systemPrompt,
             apiKeyReference: apiKeyReference
         )
     }

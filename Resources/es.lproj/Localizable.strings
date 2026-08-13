@@ -54,6 +54,7 @@
 "tokens.empty.message" = "El uso de tokens aparecerá cuando se registren conversaciones.";
 "chat.empty.title" = "Sin mensajes";
 "chat.empty.message" = "Escribe un mensaje para iniciar la conversación.";
+"chat.error.noProvider" = "No hay un proveedor de IA configurado. Abrí Preferencias (⌘,) y agregá uno en IA.";
 "sessionCleaner.empty.message" = "No hay sesiones para limpiar.";
 "badge.live" = "En vivo";
 "badge.placeholder" = "Próximamente";

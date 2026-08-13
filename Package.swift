@@ -8,10 +8,15 @@ let package = Package(
         .library(name: "AllInGentleKit", targets: ["AllInGentleKit"]),
         .executable(name: "AllInGentle", targets: ["AllInGentle"])
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui.git", from: "2.4.0")
+    ],
     targets: [
         .target(
             name: "AllInGentleKit",
+            dependencies: [
+                .product(name: "MarkdownUI", package: "swift-markdown-ui")
+            ],
             path: "Sources/AllInGentle",
             resources: [.process("../../Resources")]
         ),
