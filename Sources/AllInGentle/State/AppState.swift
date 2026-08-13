@@ -20,14 +20,30 @@ public final class AppState {
     public var sidebarVisibility: NavigationSplitViewVisibility = .all
 
     /// Whether the first-launch onboarding sheet should be presented.
-    public var showOnboarding: Bool = true
+    public var showOnboarding: Bool
+
+    private let preferences: PreferencesStore
+
+    public init(preferences: PreferencesStore = PreferencesStore()) {
+        self.preferences = preferences
+        self.showOnboarding = !preferences.bool(for: .onboardingDismissed)
+    }
+
+    /// Dismiss the onboarding sheet and persist the choice.
+    public func dismissOnboarding() {
+        showOnboarding = false
+        preferences.set(true, for: .onboardingDismissed)
+    }
+
+    /// Reopen the onboarding sheet for help menu.
+    public func presentOnboarding() {
+        showOnboarding = true
+    }
 
     /// Whether the sidebar is currently collapsed.
     public var sidebarCollapsed: Bool {
         sidebarVisibility == .detailOnly
     }
-
-    public init() {}
 
     /// Toggle the sidebar between fully visible and detail-only.
     public func toggleSidebar() {

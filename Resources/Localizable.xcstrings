@@ -439,6 +439,66 @@
         "en": { "stringUnit": { "state": "translated", "value": "Open Source" } },
         "es": { "stringUnit": { "state": "translated", "value": "Código abierto" } }
       }
+    },
+    "shell.menu.gettingStarted": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Getting Started" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Primeros pasos" } }
+      }
+    },
+    "onboarding.welcome.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Welcome to All-In-Gentle" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Bienvenido a All-In-Gentle" } }
+      }
+    },
+    "onboarding.welcome.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "A lightweight macOS companion for Gentle AI. Monitor projects, services, tokens, and chat with your AI context." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Un compañero ligero de macOS para Gentle AI. Monitoreá proyectos, servicios, tokens y chateá con tu contexto de IA." } }
+      }
+    },
+    "onboarding.integrations.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Integrations" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Integraciones" } }
+      }
+    },
+    "onboarding.integrations.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All-In-Gentle connects to Engram, CodeGraph, and OpenCode in read-only mode. No source mutation, no surprises." } },
+        "es": { "stringUnit": { "state": "translated", "value": "All-In-Gentle se conecta a Engram, CodeGraph y OpenCode en modo solo lectura. Sin mutar fuentes, sin sorpresas." } }
+      }
+    },
+    "onboarding.ready.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Ready to go" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Listo para usar" } }
+      }
+    },
+    "onboarding.ready.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Use the sidebar to navigate, ⌘K to search, and Help → Getting Started to reopen this guide." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Usá la barra lateral para navegar, ⌘K para buscar, y Ayuda → Primeros pasos para reabrir esta guía." } }
+      }
+    },
+    "onboarding.next": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Next" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Siguiente" } }
+      }
+    },
+    "onboarding.back": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Back" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Atrás" } }
+      }
+    },
+    "onboarding.finish": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Get Started" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Comenzar" } }
+      }
     }
   }
 }

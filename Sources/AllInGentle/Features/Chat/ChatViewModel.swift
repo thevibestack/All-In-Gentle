@@ -13,6 +13,12 @@ public final class ChatViewModel {
     public var input: String = ""
     public private(set) var isStreaming: Bool = false
     public var errorMessage: String?
+    public var searchQuery: String = ""
+
+    public var filteredMessages: [ChatMessage] {
+        if searchQuery.isEmpty { return messages }
+        return messages.filter { $0.content.localizedCaseInsensitiveContains(searchQuery) }
+    }
 
     private let service: LLMService
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TokensView: View {
     @State private var viewModel = TokensViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -17,19 +18,22 @@ struct TokensView: View {
                     }
                 }
                 .task { await viewModel.load() }
+                .onChange(of: appState.globalSearchQuery) { _, new in
+                    viewModel.searchQuery = new
+                }
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.items.isEmpty {
+        if viewModel.isLoading && viewModel.filteredItems.isEmpty {
             AGLoadingState(titleKey: "ds.state.loading")
-        } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
+        } else if let errorMessage = viewModel.errorMessage, viewModel.filteredItems.isEmpty {
             AGErrorState(
                 message: errorMessage,
                 retry: { Task { await viewModel.load() } }
             )
-        } else if viewModel.items.isEmpty {
+        } else if viewModel.filteredItems.isEmpty {
             AGEmptyState(
                 systemImage: "chart.bar",
                 titleKey: "tokens.empty",
@@ -37,7 +41,7 @@ struct TokensView: View {
             )
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                Table(viewModel.items) {
+                Table(viewModel.filteredItems) {
                     TableColumn(L("tokens.column.project")) { item in
                         Text(item.project)
                             .font(AGTypography.body)

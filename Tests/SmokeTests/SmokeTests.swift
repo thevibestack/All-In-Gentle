@@ -48,6 +48,44 @@ final class SmokeTests: XCTestCase {
 
     // MARK: - App shell state
 
+    // MARK: - Onboarding
+
+    func testOnboardingViewCanBeConstructed() {
+        let view = OnboardingView()
+        XCTAssertNotNil(view)
+    }
+
+    func testAppStateDismissOnboardingPersists() {
+        let defaults = makeEphemeralDefaults()
+        let store = PreferencesStore(defaults: defaults)
+        let appState = AppState(preferences: store)
+        XCTAssertTrue(appState.showOnboarding)
+
+        appState.dismissOnboarding()
+        XCTAssertFalse(appState.showOnboarding)
+        XCTAssertTrue(store.bool(for: .onboardingDismissed))
+    }
+
+    func testAppStateReadsDismissedOnboarding() {
+        let defaults = makeEphemeralDefaults()
+        let store = PreferencesStore(defaults: defaults)
+        store.set(true, for: .onboardingDismissed)
+
+        let appState = AppState(preferences: store)
+        XCTAssertFalse(appState.showOnboarding)
+    }
+
+    func testAppStatePresentOnboarding() {
+        let defaults = makeEphemeralDefaults()
+        let store = PreferencesStore(defaults: defaults)
+        store.set(true, for: .onboardingDismissed)
+
+        let appState = AppState(preferences: store)
+        XCTAssertFalse(appState.showOnboarding)
+        appState.presentOnboarding()
+        XCTAssertTrue(appState.showOnboarding)
+    }
+
     func testAppStateDefaults() {
         let appState = AppState()
         XCTAssertEqual(appState.selectedItem, .projects)

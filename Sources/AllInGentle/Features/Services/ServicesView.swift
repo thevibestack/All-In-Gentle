@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ServicesView: View {
     @State private var viewModel = ServicesViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -17,27 +18,30 @@ struct ServicesView: View {
                     }
                 }
                 .task { await viewModel.poll() }
+                .onChange(of: appState.globalSearchQuery) { _, new in
+                    viewModel.searchQuery = new
+                }
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.statuses.isEmpty {
+        if viewModel.isLoading && viewModel.filteredStatuses.isEmpty {
             AGLoadingState(titleKey: "ds.state.loading")
-        } else if let _ = viewModel.errorMessage, viewModel.statuses.isEmpty {
+        } else if let _ = viewModel.errorMessage, viewModel.filteredStatuses.isEmpty {
             AGErrorState(
                 titleKey: "services.error.title",
                 messageKey: "services.error.message",
                 retry: { Task { await viewModel.poll() } }
             )
-        } else if viewModel.statuses.isEmpty {
+        } else if viewModel.filteredStatuses.isEmpty {
             AGEmptyState(
                 systemImage: "checkmark.shield",
                 titleKey: "services.empty",
                 messageKey: "services.empty.message"
             )
         } else {
-            List(viewModel.statuses) { status in
+            List(viewModel.filteredStatuses) { status in
                 AGListRow {
                     ServiceRow(status: status)
                 }
