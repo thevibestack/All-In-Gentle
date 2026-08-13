@@ -57,6 +57,11 @@ public struct AllInGentleApp: App {
                 .accessibilityIdentifier("shell.menu.gettingStarted")
             }
         }
+
+        Settings {
+            AISettingsView()
+                .environment(appState)
+        }
     }
 
     private func sectionShortcutButton(item: AppState.AppTab, number: Int) -> some View {
