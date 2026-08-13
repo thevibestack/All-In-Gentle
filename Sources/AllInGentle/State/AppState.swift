@@ -4,10 +4,35 @@ import Observation
 @MainActor
 @Observable
 public final class AppState {
-    public var selectedTab: AppTab = .projects
+    /// Currently selected sidebar destination.
+    public var selectedItem: AppTab = .projects
+
+    /// Current scene phase, updated by the root view.
     public var scenePhase: ScenePhase = .background
 
+    /// Global search query bound to the toolbar search field.
+    public var globalSearchQuery: String = ""
+
+    /// Whether the global search field should be focused (e.g. after ⌘K).
+    public var searchFocused: Bool = false
+
+    /// Sidebar visibility for the `NavigationSplitView` shell.
+    public var sidebarVisibility: NavigationSplitViewVisibility = .all
+
+    /// Whether the first-launch onboarding sheet should be presented.
+    public var showOnboarding: Bool = true
+
+    /// Whether the sidebar is currently collapsed.
+    public var sidebarCollapsed: Bool {
+        sidebarVisibility == .detailOnly
+    }
+
     public init() {}
+
+    /// Toggle the sidebar between fully visible and detail-only.
+    public func toggleSidebar() {
+        sidebarVisibility = sidebarCollapsed ? .all : .detailOnly
+    }
 
     public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         case projects
@@ -18,6 +43,10 @@ public final class AppState {
         case sessionCleaner
 
         public var id: String { rawValue }
+
+        public init?(id: String) {
+            self.init(rawValue: id)
+        }
 
         public var titleKey: String {
             "tab.\(rawValue)"

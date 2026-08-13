@@ -325,6 +325,42 @@
         "en": { "stringUnit": { "state": "translated", "value": "Error" } },
         "es": { "stringUnit": { "state": "translated", "value": "Error" } }
       }
+    },
+    "shell.showSidebar": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Show Sidebar" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Mostrar barra lateral" } }
+      }
+    },
+    "shell.hideSidebar": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hide Sidebar" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Ocultar barra lateral" } }
+      }
+    },
+    "shell.menu.search": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar" } }
+      }
+    },
+    "shell.search.placeholder": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar" } }
+      }
+    },
+    "shell.menu.about": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "About All-In-Gentle" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Acerca de All-In-Gentle" } }
+      }
+    },
+    "shell.menu.openSource": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open Source" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Código abierto" } }
+      }
     }
   }
 }
