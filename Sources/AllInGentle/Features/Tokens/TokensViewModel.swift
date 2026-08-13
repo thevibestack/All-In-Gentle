@@ -8,6 +8,15 @@ public final class TokensViewModel {
     public private(set) var isLoading: Bool = false
     public var errorMessage: String?
     public private(set) var canLoadMore: Bool = false
+    public var searchQuery: String = ""
+
+    public var filteredItems: [TokenUsage] {
+        if searchQuery.isEmpty { return items }
+        return items.filter {
+            $0.project.localizedCaseInsensitiveContains(searchQuery)
+                || ($0.session ?? "").localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
 
     private let client: OpenCodeClient
     private let pageSize: Int

@@ -10,6 +10,10 @@ public struct AllInGentleApp: App {
         WindowGroup("All-In-Gentle") {
             RootView()
                 .environment(appState)
+                .sheet(isPresented: $appState.showOnboarding) {
+                    OnboardingView()
+                        .environment(appState)
+                }
         }
         .windowToolbarStyle(.unified)
         .commands {
@@ -44,6 +48,13 @@ public struct AllInGentleApp: App {
 
                 Button(L("shell.menu.openSource")) {}
                     .accessibilityIdentifier("shell.menu.openSource")
+
+                Divider()
+
+                Button(L("shell.menu.gettingStarted")) {
+                    appState.presentOnboarding()
+                }
+                .accessibilityIdentifier("shell.menu.gettingStarted")
             }
         }
     }

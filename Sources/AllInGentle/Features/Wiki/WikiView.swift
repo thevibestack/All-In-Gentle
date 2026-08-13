@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WikiView: View {
     @State private var viewModel = WikiViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationSplitView {
@@ -20,6 +21,9 @@ struct WikiView: View {
             }
         }
         .task { await viewModel.loadDocuments() }
+        .onChange(of: appState.globalSearchQuery) { _, new in
+            viewModel.searchQuery = new
+        }
     }
 
     private var sidebar: some View {

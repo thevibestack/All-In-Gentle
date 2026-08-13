@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel = ChatViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -27,13 +28,16 @@ struct ChatView: View {
                     }
                 }
             }
+            .onChange(of: appState.globalSearchQuery) { _, new in
+                viewModel.searchQuery = new
+            }
         }
     }
 
     private var messageList: some View {
         ScrollViewReader { proxy in
             ZStack {
-                List(viewModel.messages) { message in
+                List(viewModel.filteredMessages) { message in
                     MessageRow(message: message)
                         .id(message.id)
                         .listRowBackground(Color.clear)
@@ -42,7 +46,7 @@ struct ChatView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
 
-                if viewModel.messages.isEmpty {
+                if viewModel.filteredMessages.isEmpty {
                     AGEmptyState(
                         systemImage: "bubble.left.and.bubble.right",
                         titleKey: "chat.empty.title",
@@ -56,8 +60,8 @@ struct ChatView: View {
                         .padding(AGSpacing.medium)
                 }
             }
-            .onChange(of: viewModel.messages.count) { _, _ in
-                if let id = viewModel.messages.last?.id {
+            .onChange(of: viewModel.filteredMessages.count) { _, _ in
+                if let id = viewModel.filteredMessages.last?.id {
                     withAnimation {
                         proxy.scrollTo(id, anchor: .bottom)
                     }

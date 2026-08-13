@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProjectsView: View {
     @State private var viewModel = ProjectsViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -20,6 +21,9 @@ struct ProjectsView: View {
                 }
             }
             .task { await viewModel.load() }
+            .onChange(of: appState.globalSearchQuery) { _, new in
+                viewModel.searchQuery = new
+            }
         }
     }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionCleanerView: View {
     @State private var viewModel = SessionCleanerViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -17,26 +18,29 @@ struct SessionCleanerView: View {
                     }
                 }
                 .task { await viewModel.load() }
+                .onChange(of: appState.globalSearchQuery) { _, new in
+                    viewModel.searchQuery = new
+                }
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.groups.isEmpty {
+        if viewModel.isLoading && viewModel.filteredGroups.isEmpty {
             AGLoadingState(titleKey: "ds.state.loading")
-        } else if let errorMessage = viewModel.errorMessage, viewModel.groups.isEmpty {
+        } else if let errorMessage = viewModel.errorMessage, viewModel.filteredGroups.isEmpty {
             AGErrorState(
                 message: errorMessage,
                 retry: { Task { await viewModel.load() } }
             )
-        } else if viewModel.groups.isEmpty {
+        } else if viewModel.filteredGroups.isEmpty {
             AGEmptyState(
                 systemImage: "trash",
                 titleKey: "sessionCleaner.empty",
                 messageKey: "sessionCleaner.empty.message"
             )
         } else {
-            List(viewModel.groups) { group in
+            List(viewModel.filteredGroups) { group in
                 AGListRow {
                     SessionGroupRow(group: group)
                 }
