@@ -283,6 +283,48 @@
         "en": { "stringUnit": { "state": "translated", "value": "Disabled" } },
         "es": { "stringUnit": { "state": "translated", "value": "Deshabilitado" } }
       }
+    },
+    "ds.search.commandHint": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "⌘K" } },
+        "es": { "stringUnit": { "state": "translated", "value": "⌘K" } }
+      }
+    },
+    "ds.button.retry": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Retry" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Reintentar" } }
+      }
+    },
+    "ds.button.clear": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Clear" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Borrar" } }
+      }
+    },
+    "ds.state.loading": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Loading..." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cargando..." } }
+      }
+    },
+    "ds.state.error.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Something went wrong" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Algo salió mal" } }
+      }
+    },
+    "ds.state.error.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "We couldn't load this section. Try again." } },
+        "es": { "stringUnit": { "state": "translated", "value": "No pudimos cargar esta sección. Inténtalo de nuevo." } }
+      }
+    },
+    "ds.badge.error": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Error" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Error" } }
+      }
     }
   }
 }
