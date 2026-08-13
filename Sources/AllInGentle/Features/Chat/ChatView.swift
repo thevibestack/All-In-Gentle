@@ -2,19 +2,29 @@ import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel = ChatViewModel()
-    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 messageList
                 Divider()
+                if let errorMessage = viewModel.errorMessage {
+                    AGErrorState(
+                        message: errorMessage,
+                        retry: { Task { await viewModel.send() } }
+                    )
+                    .frame(height: 120)
+                }
                 inputBar
             }
             .navigationTitle(L("chat.title"))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    placeholderButton(title: L("chat.provider"))
+                    HStack(spacing: AGSpacing.xSmall) {
+                        AGButton("chat.provider", systemImage: "person.crop.circle", variant: .secondary, action: {})
+                            .disabled(true)
+                        AGStatusBadge(status: .placeholder)
+                    }
                 }
             }
         }
@@ -22,11 +32,30 @@ struct ChatView: View {
 
     private var messageList: some View {
         ScrollViewReader { proxy in
-            List(viewModel.messages) { message in
-                MessageRow(message: message)
-                    .id(message.id)
+            ZStack {
+                List(viewModel.messages) { message in
+                    MessageRow(message: message)
+                        .id(message.id)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: AGSpacing.xxSmall, leading: AGSpacing.medium, bottom: AGSpacing.xxSmall, trailing: AGSpacing.medium))
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+
+                if viewModel.messages.isEmpty {
+                    AGEmptyState(
+                        systemImage: "bubble.left.and.bubble.right",
+                        titleKey: "chat.empty.title",
+                        messageKey: "chat.empty.message"
+                    )
+                }
+
+                if viewModel.isStreaming {
+                    AGLoadingState(titleKey: "ds.state.loading")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(AGSpacing.medium)
+                }
             }
-            .listStyle(.plain)
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let id = viewModel.messages.last?.id {
                     withAnimation {
@@ -34,47 +63,32 @@ struct ChatView: View {
                     }
                 }
             }
-            .overlay {
-                if viewModel.messages.isEmpty {
-                    Text(L("chat.start"))
-                        .foregroundStyle(.secondary)
-                        .padding()
-                }
-            }
         }
     }
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            TextField(L("chat.message"), text: $viewModel.input, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(1...5)
-                .focused($isInputFocused)
-
-            Button(action: { Task { await viewModel.send() } }) {
-                if viewModel.isStreaming {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                }
-            }
-            .disabled(
-                viewModel.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || viewModel.isStreaming
+        HStack(spacing: AGSpacing.small) {
+            AGSearchField(
+                text: $viewModel.input,
+                placeholderKey: "chat.message",
+                commandHintKey: nil
             )
-        }
-        .padding()
-    }
 
-    private func placeholderButton(title: String) -> some View {
-        Button(action: {}) {
-            HStack(spacing: 6) {
-                Text(title)
-                InteractionStateBadge(state: .placeholder)
+            if viewModel.isStreaming {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: AGSpacing.iconLarge, height: AGSpacing.iconLarge)
+            } else {
+                AGButton("", systemImage: "arrow.up.circle.fill", variant: .primary) {
+                    Task { await viewModel.send() }
+                }
+                .disabled(
+                    viewModel.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
             }
         }
+        .padding(AGSpacing.medium)
+        .background(AGColors.surface)
     }
 }
 
@@ -82,22 +96,26 @@ private struct MessageRow: View {
     let message: ChatMessage
 
     var body: some View {
-        HStack {
+        HStack(spacing: 0) {
             if message.role == .assistant {
-                Text(message.content)
-                    .textSelection(.enabled)
+                AGCard {
+                    Text(message.content)
+                        .font(AGTypography.body)
+                        .foregroundStyle(AGColors.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 Spacer()
             } else {
                 Spacer()
                 Text(message.content)
+                    .font(AGTypography.body)
+                    .foregroundStyle(AGColors.accentText)
                     .textSelection(.enabled)
-                    .foregroundStyle(.white)
-                    .padding(10)
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(AGSpacing.small)
+                    .background(AGColors.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: AGSpacing.cornerRadiusLarge, style: .continuous))
             }
         }
-        .padding(.vertical, 4)
-        .listRowBackground(Color.clear)
     }
 }

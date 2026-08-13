@@ -74,6 +74,13 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertNotNil(error)
     }
 
+    func testAGListRowCanBeConstructed() {
+        let row = AGListRow {
+            Text("Sample")
+        }
+        XCTAssertNotNil(row)
+    }
+
     // MARK: - Status badge
 
     func testAGStatusBadgeCanBeConstructedFromInteractionState() {
