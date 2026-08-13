@@ -7,6 +7,14 @@ public final class ServicesViewModel {
     public private(set) var statuses: [ServiceStatus] = []
     public private(set) var isLoading: Bool = false
     public var errorMessage: String?
+    public var searchQuery: String = ""
+
+    public var filteredStatuses: [ServiceStatus] {
+        if searchQuery.isEmpty { return statuses }
+        return statuses.filter {
+            $0.name.localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
 
     private let monitor: ProcessMonitor
     private let services: [ServiceDescriptor]

@@ -26,6 +26,7 @@ public final class WikiViewModel {
     public var selectedDocument: OpenSpecScanner.Document?
     public private(set) var previewText: String = ""
     public private(set) var isSearching: Bool = false
+    public private(set) var isLoadingDocuments: Bool = false
     public var errorMessage: String?
 
     private let engram: any EngramSearchProvider
@@ -57,6 +58,8 @@ public final class WikiViewModel {
     }
 
     public func loadDocuments() async {
+        isLoadingDocuments = true
+        defer { isLoadingDocuments = false }
         do {
             documents = try await scanner.scan(root: openspecRoot)
         } catch {

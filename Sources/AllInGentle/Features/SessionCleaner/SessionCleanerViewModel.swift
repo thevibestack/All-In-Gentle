@@ -37,6 +37,15 @@ public final class SessionCleanerViewModel {
     public private(set) var groups: [SessionGroup] = []
     public private(set) var isLoading: Bool = false
     public var errorMessage: String?
+    public var searchQuery: String = ""
+
+    public var filteredGroups: [SessionGroup] {
+        if searchQuery.isEmpty { return groups }
+        return groups.filter {
+            $0.name.localizedCaseInsensitiveContains(searchQuery)
+                || $0.sessions.contains { $0.sessionName.localizedCaseInsensitiveContains(searchQuery) }
+        }
+    }
 
     private let client: OpenCodeClient
 

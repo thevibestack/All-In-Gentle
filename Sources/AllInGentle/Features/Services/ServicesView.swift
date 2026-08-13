@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ServicesView: View {
     @State private var viewModel = ServicesViewModel()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -9,39 +10,45 @@ struct ServicesView: View {
                 .navigationTitle(L("services.title"))
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        placeholderButton(title: L("services.safeRestart"))
+                        HStack(spacing: AGSpacing.xSmall) {
+                            AGButton("services.safeRestart", systemImage: "arrow.clockwise", variant: .secondary, action: {})
+                                .disabled(true)
+                            AGStatusBadge(status: .placeholder)
+                        }
                     }
                 }
                 .task { await viewModel.poll() }
+                .onChange(of: appState.globalSearchQuery) { _, new in
+                    viewModel.searchQuery = new
+                }
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.statuses.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if let errorMessage = viewModel.errorMessage, viewModel.statuses.isEmpty {
-            Text(errorMessage)
-                .foregroundStyle(.secondary)
-                .padding()
-        } else if viewModel.statuses.isEmpty {
-            Text(L("services.empty"))
-                .foregroundStyle(.secondary)
-                .padding()
+        if viewModel.isLoading && viewModel.filteredStatuses.isEmpty {
+            AGLoadingState(titleKey: "ds.state.loading")
+        } else if let _ = viewModel.errorMessage, viewModel.filteredStatuses.isEmpty {
+            AGErrorState(
+                titleKey: "services.error.title",
+                messageKey: "services.error.message",
+                retry: { Task { await viewModel.poll() } }
+            )
+        } else if viewModel.filteredStatuses.isEmpty {
+            AGEmptyState(
+                systemImage: "checkmark.shield",
+                titleKey: "services.empty",
+                messageKey: "services.empty.message"
+            )
         } else {
-            List(viewModel.statuses) { status in
-                ServiceRow(status: status)
+            List(viewModel.filteredStatuses) { status in
+                AGListRow {
+                    ServiceRow(status: status)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: AGSpacing.medium, bottom: 0, trailing: AGSpacing.medium))
             }
-        }
-    }
-
-    private func placeholderButton(title: String) -> some View {
-        Button(action: {}) {
-            HStack(spacing: 6) {
-                Text(title)
-                InteractionStateBadge(state: .placeholder)
-            }
+            .scrollContentBackground(.hidden)
         }
     }
 }
@@ -50,15 +57,16 @@ private struct ServiceRow: View {
     let status: ServiceStatus
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
+            HStack(spacing: AGSpacing.small) {
                 Text(status.name)
-                    .font(.headline)
+                    .font(AGTypography.headline)
+                    .foregroundStyle(AGColors.textPrimary)
                 Spacer()
-                StatusIndicator(isRunning: status.isRunning)
+                AGStatusBadge(status: status.isRunning ? .live : .disabled)
             }
 
-            HStack(spacing: 16) {
+            HStack(spacing: AGSpacing.large) {
                 if let pid = status.pid {
                     LabeledValue(label: L("services.pid"), value: String(pid))
                 }
@@ -72,26 +80,10 @@ private struct ServiceRow: View {
 
             if let error = status.lastError {
                 Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(AGTypography.caption)
+                    .foregroundStyle(AGColors.statusError)
                     .lineLimit(2)
             }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct StatusIndicator: View {
-    let isRunning: Bool
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(isRunning ? Color.green : Color.red)
-                .frame(width: 8, height: 8)
-            Text(isRunning ? L("services.running") : L("services.stopped"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }
@@ -101,12 +93,13 @@ private struct LabeledValue: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(AGTypography.caption)
+                .foregroundStyle(AGColors.textSecondary)
             Text(value)
-                .font(.caption)
+                .font(AGTypography.body)
+                .foregroundStyle(AGColors.textPrimary)
         }
     }
 }

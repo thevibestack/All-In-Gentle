@@ -37,4 +37,5 @@ public enum PreferenceKey: String, CaseIterable, Sendable {
     case selectedTab
     case lastProjectPath
     case chatProvider
+    case onboardingDismissed
 }

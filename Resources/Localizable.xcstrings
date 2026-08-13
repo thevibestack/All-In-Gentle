@@ -266,6 +266,84 @@
         "es": { "stringUnit": { "state": "translated", "value": "%d sesiones" } }
       }
     },
+    "projects.addProject": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add Project" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Agregar proyecto" } }
+      }
+    },
+    "projects.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add a project or check your integrations." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Agrega un proyecto o revisa tus integraciones." } }
+      }
+    },
+    "wiki.empty.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No document selected" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Ningún documento seleccionado" } }
+      }
+    },
+    "wiki.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a document from the list to preview it." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Elige un documento de la lista para previsualizarlo." } }
+      }
+    },
+    "wiki.loading": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Scanning documents..." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Escaneando documentos..." } }
+      }
+    },
+    "wiki.previewActions": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Preview Actions" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Acciones de vista previa" } }
+      }
+    },
+    "services.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add services in settings or check permissions." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Agrega servicios en ajustes o revisa los permisos." } }
+      }
+    },
+    "services.error.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permission Denied" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Permiso denegado" } }
+      }
+    },
+    "services.error.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All-In-Gentle cannot access process information." } },
+        "es": { "stringUnit": { "state": "translated", "value": "All-In-Gentle no puede acceder a la información de procesos." } }
+      }
+    },
+    "tokens.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Token usage will appear once conversations are recorded." } },
+        "es": { "stringUnit": { "state": "translated", "value": "El uso de tokens aparecerá cuando se registren conversaciones." } }
+      }
+    },
+    "chat.empty.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No messages" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin mensajes" } }
+      }
+    },
+    "chat.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Type a message to start the conversation." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Escribe un mensaje para iniciar la conversación." } }
+      }
+    },
+    "sessionCleaner.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No sessions to clean up." } },
+        "es": { "stringUnit": { "state": "translated", "value": "No hay sesiones para limpiar." } }
+      }
+    },
     "badge.live": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Live" } },
@@ -324,6 +402,102 @@
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Error" } },
         "es": { "stringUnit": { "state": "translated", "value": "Error" } }
+      }
+    },
+    "shell.showSidebar": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Show Sidebar" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Mostrar barra lateral" } }
+      }
+    },
+    "shell.hideSidebar": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hide Sidebar" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Ocultar barra lateral" } }
+      }
+    },
+    "shell.menu.search": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar" } }
+      }
+    },
+    "shell.search.placeholder": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar" } }
+      }
+    },
+    "shell.menu.about": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "About All-In-Gentle" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Acerca de All-In-Gentle" } }
+      }
+    },
+    "shell.menu.openSource": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open Source" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Código abierto" } }
+      }
+    },
+    "shell.menu.gettingStarted": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Getting Started" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Primeros pasos" } }
+      }
+    },
+    "onboarding.welcome.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Welcome to All-In-Gentle" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Bienvenido a All-In-Gentle" } }
+      }
+    },
+    "onboarding.welcome.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "A lightweight macOS companion for Gentle AI. Monitor projects, services, tokens, and chat with your AI context." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Un compañero ligero de macOS para Gentle AI. Monitoreá proyectos, servicios, tokens y chateá con tu contexto de IA." } }
+      }
+    },
+    "onboarding.integrations.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Integrations" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Integraciones" } }
+      }
+    },
+    "onboarding.integrations.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All-In-Gentle connects to Engram, CodeGraph, and OpenCode in read-only mode. No source mutation, no surprises." } },
+        "es": { "stringUnit": { "state": "translated", "value": "All-In-Gentle se conecta a Engram, CodeGraph y OpenCode en modo solo lectura. Sin mutar fuentes, sin sorpresas." } }
+      }
+    },
+    "onboarding.ready.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Ready to go" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Listo para usar" } }
+      }
+    },
+    "onboarding.ready.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Use the sidebar to navigate, ⌘K to search, and Help → Getting Started to reopen this guide." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Usá la barra lateral para navegar, ⌘K para buscar, y Ayuda → Primeros pasos para reabrir esta guía." } }
+      }
+    },
+    "onboarding.next": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Next" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Siguiente" } }
+      }
+    },
+    "onboarding.back": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Back" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Atrás" } }
+      }
+    },
+    "onboarding.finish": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Get Started" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Comenzar" } }
       }
     }
   }
