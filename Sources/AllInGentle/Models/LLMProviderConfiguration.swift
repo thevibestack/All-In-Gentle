@@ -7,6 +7,14 @@ public enum LLMProviderType: String, Codable, Sendable, CaseIterable, Identifiab
     case deepseek
 
     public var id: String { rawValue }
+
+    /// Human-readable label for the provider type.
+    public var displayName: String {
+        switch self {
+        case .deepseek:
+            return "DeepSeek"
+        }
+    }
 }
 
 /// Configuration for a single LLM provider, persisted outside the Keychain.
@@ -23,6 +31,14 @@ public struct LLMProviderConfiguration: Codable, Identifiable, Sendable, Equatab
     public var systemPrompt: String?
     public var maxTokens: Int?
     public var apiKeyReference: String
+
+    /// The account string used to store this provider's API key in the Keychain.
+    public var apiKeyAccount: String { apiKeyReference }
+
+    /// Builds the standard Keychain account string for a provider's API key.
+    public static func keychainAccount(for id: String) -> String {
+        "all-in-gentle.provider.\(id).api-key"
+    }
 
     public init(
         id: String,
@@ -49,7 +65,7 @@ public struct LLMProviderConfiguration: Codable, Identifiable, Sendable, Equatab
     /// A DeepSeek configuration with the defaults used in v1.
     public static func deepseekDefault(
         id: String = "deepseek",
-        apiKeyReference: String = "all-in-gentle.provider.deepseek.api-key"
+        apiKeyReference: String = keychainAccount(for: "deepseek")
     ) -> LLMProviderConfiguration {
         LLMProviderConfiguration(
             id: id,
