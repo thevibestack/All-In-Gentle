@@ -12,7 +12,8 @@ let package = Package(
     targets: [
         .target(
             name: "AllInGentleKit",
-            path: "Sources/AllInGentle"
+            path: "Sources/AllInGentle",
+            resources: [.process("../../Resources")]
         ),
         .executableTarget(
             name: "AllInGentle",
@@ -49,6 +50,16 @@ let package = Package(
             name: "ChatSessionCleanerTests",
             dependencies: ["AllInGentleKit"],
             path: "Tests/ChatSessionCleanerTests"
+        ),
+        .testTarget(
+            name: "IntegrationTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/IntegrationTests"
+        ),
+        .testTarget(
+            name: "SmokeTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/SmokeTests"
         ),
     ]
 )

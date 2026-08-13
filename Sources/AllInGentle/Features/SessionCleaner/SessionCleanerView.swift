@@ -6,10 +6,10 @@ struct SessionCleanerView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Session Cleaner")
+                .navigationTitle(L("sessionCleaner.title"))
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        placeholderButton(title: "Clean up")
+                        placeholderButton(title: L("sessionCleaner.cleanUp"))
                     }
                 }
                 .task { await viewModel.load() }
@@ -26,7 +26,7 @@ struct SessionCleanerView: View {
                 .foregroundStyle(.secondary)
                 .padding()
         } else if viewModel.groups.isEmpty {
-            Text("No sessions found")
+            Text(L("sessionCleaner.empty"))
                 .foregroundStyle(.secondary)
                 .padding()
         } else {
@@ -40,13 +40,7 @@ struct SessionCleanerView: View {
         Button(action: {}) {
             HStack(spacing: 6) {
                 Text(title)
-                Text("Próximamente")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .clipShape(Capsule())
+                InteractionStateBadge(state: .placeholder)
             }
         }
     }
@@ -61,19 +55,19 @@ private struct SessionGroupRow: View {
                 Text(group.name)
                     .font(.headline)
                 Spacer()
-                Text("\(group.sessions.count) sessions")
+                Text(L("sessionCleaner.sessions.count", group.sessions.count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 16) {
-                LabeledValue(label: "Tokens", value: "\(group.totalTokens)")
-                LabeledValue(label: "Cost", value: String(format: "%.4f", group.totalCost))
-                LabeledValue(label: "Latest", value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
+                LabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
+                LabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
+                LabeledValue(label: L("sessionCleaner.latest"), value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
             }
 
             if !group.sessions.isEmpty {
-                DisclosureGroup("Sessions") {
+                DisclosureGroup(L("sessionCleaner.sessions")) {
                     ForEach(group.sessions) { session in
                         HStack(spacing: 8) {
                             Text(session.sessionName)
