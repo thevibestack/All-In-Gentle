@@ -1,7 +1,15 @@
 import Foundation
 import Security
 
-public actor KeychainStore {
+/// Abstract interface for Keychain storage so production code and tests can
+/// swap implementations without changing call sites.
+public protocol KeychainStoring: Actor {
+    func save(key: String, value: String) throws
+    func load(key: String) -> String?
+    func delete(key: String)
+}
+
+public actor KeychainStore: KeychainStoring {
     public init() {}
 
     public func save(key: String, value: String) throws {
