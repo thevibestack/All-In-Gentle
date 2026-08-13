@@ -9,6 +9,7 @@ public struct TokenUsage: Identifiable, Codable, Hashable, Sendable {
     public var totalTokens: Int { promptTokens + completionTokens }
     public var estimatedCost: Double
     public var timestamp: Date
+    public var rawTimeUpdated: Double?
 
     public init(
         id: String,
@@ -17,7 +18,8 @@ public struct TokenUsage: Identifiable, Codable, Hashable, Sendable {
         promptTokens: Int,
         completionTokens: Int,
         estimatedCost: Double,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        rawTimeUpdated: Double? = nil
     ) {
         self.id = id
         self.project = project
@@ -26,5 +28,6 @@ public struct TokenUsage: Identifiable, Codable, Hashable, Sendable {
         self.completionTokens = completionTokens
         self.estimatedCost = estimatedCost
         self.timestamp = timestamp
+        self.rawTimeUpdated = rawTimeUpdated
     }
 }
