@@ -5,6 +5,7 @@ public struct AGErrorState: View {
     public let systemImage: String
     public let titleKey: String
     public let messageKey: String
+    public let messageOverride: String?
     public let retryTitleKey: String
     public let retry: (() -> Void)?
 
@@ -18,6 +19,23 @@ public struct AGErrorState: View {
         self.systemImage = systemImage
         self.titleKey = titleKey
         self.messageKey = messageKey
+        self.messageOverride = nil
+        self.retryTitleKey = retryTitleKey
+        self.retry = retry
+    }
+
+    /// Creates an error state with a dynamic, runtime message string.
+    public init(
+        systemImage: String = "exclamationmark.triangle",
+        titleKey: String = "ds.state.error.title",
+        message: String,
+        retryTitleKey: String = "ds.button.retry",
+        retry: (() -> Void)? = nil
+    ) {
+        self.systemImage = systemImage
+        self.titleKey = titleKey
+        self.messageKey = ""
+        self.messageOverride = message
         self.retryTitleKey = retryTitleKey
         self.retry = retry
     }
@@ -32,7 +50,7 @@ public struct AGErrorState: View {
                 .font(AGTypography.headline)
                 .foregroundStyle(AGColors.textPrimary)
 
-            Text(L(messageKey))
+            Text(messageOverride ?? L(messageKey))
                 .font(AGTypography.body)
                 .foregroundStyle(AGColors.textSecondary)
                 .lineLimit(3)
