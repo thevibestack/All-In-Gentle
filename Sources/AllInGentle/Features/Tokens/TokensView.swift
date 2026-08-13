@@ -6,10 +6,10 @@ struct TokensView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Tokens")
+                .navigationTitle(L("tokens.title"))
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        placeholderButton(title: "Export")
+                        placeholderButton(title: L("tokens.export"))
                     }
                 }
                 .task { await viewModel.load() }
@@ -26,49 +26,49 @@ struct TokensView: View {
                 .foregroundStyle(.secondary)
                 .padding()
         } else if viewModel.items.isEmpty {
-            Text("No token usage data")
+            Text(L("tokens.empty"))
                 .foregroundStyle(.secondary)
                 .padding()
         } else {
             VStack(spacing: 0) {
                 Table(viewModel.items) {
-                    TableColumn("Project") { item in
+                    TableColumn(L("tokens.column.project")) { item in
                         Text(item.project)
                             .lineLimit(1)
                     }
                     .width(min: 120, ideal: 180)
 
-                    TableColumn("Session") { item in
+                    TableColumn(L("tokens.column.session")) { item in
                         Text(item.session ?? "—")
                             .lineLimit(1)
                     }
                     .width(min: 120, ideal: 200)
 
-                    TableColumn("Prompt") { item in
+                    TableColumn(L("tokens.column.prompt")) { item in
                         Text("\(item.promptTokens)")
                             .monospacedDigit()
                     }
                     .width(min: 60, ideal: 80)
 
-                    TableColumn("Completion") { item in
+                    TableColumn(L("tokens.column.completion")) { item in
                         Text("\(item.completionTokens)")
                             .monospacedDigit()
                     }
                     .width(min: 60, ideal: 80)
 
-                    TableColumn("Total") { item in
+                    TableColumn(L("tokens.column.total")) { item in
                         Text("\(item.totalTokens)")
                             .monospacedDigit()
                     }
                     .width(min: 60, ideal: 80)
 
-                    TableColumn("Cost") { item in
+                    TableColumn(L("tokens.column.cost")) { item in
                         Text(String(format: "%.4f", item.estimatedCost))
                             .monospacedDigit()
                     }
                     .width(min: 60, ideal: 80)
 
-                    TableColumn("Date") { item in
+                    TableColumn(L("tokens.column.date")) { item in
                         Text(item.timestamp, style: .date)
                             .monospacedDigit()
                     }
@@ -81,7 +81,7 @@ struct TokensView: View {
                             ProgressView()
                                 .controlSize(.small)
                         } else {
-                            Text("Load More")
+                            Text(L("tokens.loadMore"))
                         }
                     }
                     .frame(maxWidth: .infinity, minHeight: 32)
@@ -95,13 +95,7 @@ struct TokensView: View {
         Button(action: {}) {
             HStack(spacing: 6) {
                 Text(title)
-                Text("Próximamente")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .clipShape(Capsule())
+                InteractionStateBadge(state: .placeholder)
             }
         }
     }

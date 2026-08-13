@@ -9,13 +9,13 @@ struct ProjectsView: View {
                 searchField
                 content
             }
-            .navigationTitle("Projects")
+            .navigationTitle(L("projects.title"))
             .task { await viewModel.load() }
         }
     }
 
     private var searchField: some View {
-        TextField("Search projects", text: $viewModel.searchQuery)
+        TextField(L("projects.search"), text: $viewModel.searchQuery)
             .textFieldStyle(.roundedBorder)
             .padding()
     }
@@ -30,7 +30,7 @@ struct ProjectsView: View {
                 .foregroundStyle(.secondary)
                 .padding()
         } else if viewModel.filteredItems.isEmpty {
-            Text("No projects found")
+            Text(L("projects.empty"))
                 .foregroundStyle(.secondary)
                 .padding()
         } else {

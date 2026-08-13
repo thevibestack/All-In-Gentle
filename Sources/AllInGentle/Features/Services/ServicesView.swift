@@ -6,10 +6,10 @@ struct ServicesView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Services")
+                .navigationTitle(L("services.title"))
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        placeholderButton(title: "Safe Restart")
+                        placeholderButton(title: L("services.safeRestart"))
                     }
                 }
                 .task { await viewModel.poll() }
@@ -26,7 +26,7 @@ struct ServicesView: View {
                 .foregroundStyle(.secondary)
                 .padding()
         } else if viewModel.statuses.isEmpty {
-            Text("No services configured")
+            Text(L("services.empty"))
                 .foregroundStyle(.secondary)
                 .padding()
         } else {
@@ -40,13 +40,7 @@ struct ServicesView: View {
         Button(action: {}) {
             HStack(spacing: 6) {
                 Text(title)
-                Text("Próximamente")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .clipShape(Capsule())
+                InteractionStateBadge(state: .placeholder)
             }
         }
     }
@@ -66,13 +60,13 @@ private struct ServiceRow: View {
 
             HStack(spacing: 16) {
                 if let pid = status.pid {
-                    LabeledValue(label: "PID", value: String(pid))
+                    LabeledValue(label: L("services.pid"), value: String(pid))
                 }
                 if let port = status.port {
-                    LabeledValue(label: "Port", value: String(port))
+                    LabeledValue(label: L("services.port"), value: String(port))
                 }
                 if let uptime = status.uptime {
-                    LabeledValue(label: "Uptime", value: formatUptime(uptime))
+                    LabeledValue(label: L("services.uptime"), value: formatUptime(uptime))
                 }
             }
 
@@ -95,7 +89,7 @@ private struct StatusIndicator: View {
             Circle()
                 .fill(isRunning ? Color.green : Color.red)
                 .frame(width: 8, height: 8)
-            Text(isRunning ? "Running" : "Stopped")
+            Text(isRunning ? L("services.running") : L("services.stopped"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
