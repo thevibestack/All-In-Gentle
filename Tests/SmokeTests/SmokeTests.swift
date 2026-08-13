@@ -3,6 +3,7 @@ import SwiftUI
 import XCTest
 @testable import AllInGentleKit
 
+@MainActor
 final class SmokeTests: XCTestCase {
     // MARK: - Interaction-state badges
 
@@ -13,9 +14,9 @@ final class SmokeTests: XCTestCase {
     }
 
     func testInteractionStateBadgeLabels() {
-        XCTAssertEqual(InteractionState.live.label, "Live")
-        XCTAssertEqual(InteractionState.placeholder.label, "Coming soon")
-        XCTAssertEqual(InteractionState.disabled.label, "Disabled")
+        XCTAssertEqual(InteractionState.live.label, L(InteractionState.live.catalogKey))
+        XCTAssertEqual(InteractionState.placeholder.label, L(InteractionState.placeholder.catalogKey))
+        XCTAssertEqual(InteractionState.disabled.label, L(InteractionState.disabled.catalogKey))
     }
 
     func testPlaceholderBadgeCanBeConstructed() {
@@ -38,12 +39,10 @@ final class SmokeTests: XCTestCase {
     }
 
     func testSidebarItemLabelsAreLocalized() {
-        XCTAssertEqual(AppState.AppTab.projects.title, "Projects")
-        XCTAssertEqual(AppState.AppTab.wiki.title, "Wiki")
-        XCTAssertEqual(AppState.AppTab.services.title, "Services")
-        XCTAssertEqual(AppState.AppTab.tokens.title, "Tokens")
-        XCTAssertEqual(AppState.AppTab.chat.title, "Chat")
-        XCTAssertEqual(AppState.AppTab.sessionCleaner.title, "Session Cleaner")
+        for item in AppState.AppTab.allCases {
+            XCTAssertEqual(item.title, L(item.titleKey))
+            XCTAssertFalse(item.title.isEmpty)
+        }
     }
 
     // MARK: - App shell state

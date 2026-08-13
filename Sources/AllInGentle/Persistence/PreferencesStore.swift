@@ -31,6 +31,52 @@ public final class PreferencesStore: @unchecked Sendable {
     public func set(_ value: Bool, for key: PreferenceKey) {
         queue.sync { defaults.set(value, forKey: key.rawValue) }
     }
+
+    public func removeValue(for key: PreferenceKey) {
+        queue.sync { defaults.removeObject(forKey: key.rawValue) }
+    }
+
+    public func codable<T: Codable>(for key: PreferenceKey) -> T? {
+        queue.sync {
+            guard let data = defaults.object(forKey: key.rawValue) as? Data else { return nil }
+            return try? JSONDecoder().decode(T.self, from: data)
+        }
+    }
+
+    public func setCodable<T: Codable>(_ value: T?, for key: PreferenceKey) {
+        queue.sync {
+            if let value {
+                if let data = try? JSONEncoder().encode(value) {
+                    defaults.set(data, forKey: key.rawValue)
+                }
+            } else {
+                defaults.removeObject(forKey: key.rawValue)
+            }
+        }
+    }
+
+    // MARK: - Convenience accessors
+
+    public var llmProviderConfiguration: LLMProviderConfiguration? {
+        get { codable(for: .llmProviderConfiguration) }
+        set { setCodable(newValue, for: .llmProviderConfiguration) }
+    }
+
+    public var openSpecRoot: String? {
+        get { string(for: .openSpecRoot) }
+        set {
+            if let newValue {
+                set(newValue, for: .openSpecRoot)
+            } else {
+                removeValue(for: .openSpecRoot)
+            }
+        }
+    }
+
+    public var onboardingCompleted: Bool {
+        get { bool(for: .onboardingCompleted) }
+        set { set(newValue, for: .onboardingCompleted) }
+    }
 }
 
 public enum PreferenceKey: String, CaseIterable, Sendable {
@@ -38,4 +84,7 @@ public enum PreferenceKey: String, CaseIterable, Sendable {
     case lastProjectPath
     case chatProvider
     case onboardingDismissed
+    case llmProviderConfiguration
+    case openSpecRoot
+    case onboardingCompleted
 }

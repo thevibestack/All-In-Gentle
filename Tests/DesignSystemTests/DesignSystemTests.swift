@@ -3,6 +3,7 @@ import SwiftUI
 import XCTest
 @testable import AllInGentleKit
 
+@MainActor
 final class DesignSystemTests: XCTestCase {
     // MARK: - Color tokens
 

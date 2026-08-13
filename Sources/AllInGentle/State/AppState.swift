@@ -7,6 +7,12 @@ public final class AppState {
     /// Currently selected sidebar destination.
     public var selectedItem: AppTab = .projects
 
+    /// Currently selected project path for cross-tab context.
+    public var selectedProjectPath: String? = nil
+
+    /// Health snapshot for monitored services keyed by service identifier.
+    public var servicesHealthSnapshot: [String: ServiceHealthSnapshot] = [:]
+
     /// Current scene phase, updated by the root view.
     public var scenePhase: ScenePhase = .background
 
@@ -26,13 +32,14 @@ public final class AppState {
 
     public init(preferences: PreferencesStore = PreferencesStore()) {
         self.preferences = preferences
-        self.showOnboarding = !preferences.bool(for: .onboardingDismissed)
+        self.showOnboarding = !(preferences.bool(for: .onboardingDismissed) || preferences.onboardingCompleted)
     }
 
     /// Dismiss the onboarding sheet and persist the choice.
     public func dismissOnboarding() {
         showOnboarding = false
         preferences.set(true, for: .onboardingDismissed)
+        preferences.onboardingCompleted = true
     }
 
     /// Reopen the onboarding sheet for help menu.

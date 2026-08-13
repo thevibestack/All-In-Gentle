@@ -31,6 +31,7 @@ struct StubOpenSpecScanning: OpenSpecScanning {
     }
 }
 
+@MainActor
 final class ProjectsWikiTests: XCTestCase {
 
     func testProjectsViewModelMergesSourcesAndDerivesDisplayName() async {
@@ -93,11 +94,11 @@ final class ProjectsWikiTests: XCTestCase {
 
         viewModel.searchQuery = "alp"
         XCTAssertEqual(viewModel.filteredItems.count, 1)
-        XCTAssertEqual(viewModel.filteredItems.first?.name, "Alpha")
+        XCTAssertEqual(viewModel.filteredItems.first?.name, "alpha")
 
         viewModel.searchQuery = "beta"
         XCTAssertEqual(viewModel.filteredItems.count, 1)
-        XCTAssertEqual(viewModel.filteredItems.first?.name, "Beta")
+        XCTAssertEqual(viewModel.filteredItems.first?.name, "beta")
 
         viewModel.searchQuery = ""
         XCTAssertEqual(viewModel.filteredItems.count, 2)

@@ -1,6 +1,7 @@
 import XCTest
 @testable import AllInGentleKit
 
+@MainActor
 final class ChatSessionCleanerTests: XCTestCase {
 
     // MARK: - Chat
@@ -94,7 +95,7 @@ final class ChatSessionCleanerTests: XCTestCase {
         XCTAssertEqual(groupA?.name, "Project Alpha")
         XCTAssertEqual(groupA?.sessions.count, 2)
         XCTAssertEqual(groupA?.totalTokens, 150)
-        XCTAssertEqual(groupA?.totalCost, 0.0015, accuracy: 1e-10)
+        XCTAssertEqual(groupA?.totalCost ?? 0, 0.0015, accuracy: 1e-10)
         XCTAssertEqual(groupA?.latestDate, Date(timeIntervalSince1970: 2000))
 
         let groupB = viewModel.groups.first { $0.id == "proj-b" }

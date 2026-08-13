@@ -8,6 +8,10 @@ actor CapturingProcessRunner: ProcessRunning {
     var lastArguments: [String] = []
     var nextOutput: String = ""
 
+    func setNextOutput(_ value: String) {
+        nextOutput = value
+    }
+
     func run(executable: URL, arguments: [String]) async throws -> String {
         lastExecutable = executable
         lastArguments = arguments
@@ -92,15 +96,19 @@ final class ClientTests: XCTestCase {
     }
 
     func testProcessMonitorCanStartMonitoringSequence() async {
-        let monitor = ProcessMonitor(interval: .seconds(5))
+        let runner = CapturingProcessRunner()
+        await runner.setNextOutput("")
+        let monitor = ProcessMonitor(interval: .milliseconds(10), runner: runner)
         let descriptor = ServiceDescriptor(
             id: "engram",
             name: "Engram",
             processName: "engram",
             port: 7437
         )
-        let stream = monitor.updates(for: [descriptor])
+        let stream = await monitor.updates(for: [descriptor])
         var iterator = stream.makeAsyncIterator()
-        _ = try? await iterator.next()
+        let statuses = try? await iterator.next()
+        XCTAssertNotNil(statuses)
+        XCTAssertEqual(statuses?.first?.id, "engram")
     }
 }
