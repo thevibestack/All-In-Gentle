@@ -66,5 +66,10 @@ let package = Package(
             dependencies: ["AllInGentleKit"],
             path: "Tests/DesignSystemTests"
         ),
+        .testTarget(
+            name: "SettingsTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/SettingsTests"
+        ),
     ]
 )
