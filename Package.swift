@@ -40,5 +40,10 @@ let package = Package(
             dependencies: ["AllInGentleKit"],
             path: "Tests/ProjectsWikiTests"
         ),
+        .testTarget(
+            name: "ServicesTokensTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/ServicesTokensTests"
+        ),
     ]
 )
