@@ -1,6 +1,16 @@
 import Foundation
 import SQLite3
 
+public struct TokenCursor: Codable, Hashable, Sendable {
+    public let timeUpdated: Double
+    public let id: String
+
+    public init(timeUpdated: Double, id: String) {
+        self.timeUpdated = timeUpdated
+        self.id = id
+    }
+}
+
 public actor OpenCodeClient {
     public let dbPath: String
 
@@ -75,6 +85,7 @@ public actor OpenCodeClient {
             let cost = row[3].flatMap { Double($0) } ?? 0
             let input = row[4].flatMap { Int($0) } ?? 0
             let output = row[5].flatMap { Int($0) } ?? 0
+            let timeUpdated = row[6].flatMap { Double($0) }
             let date = row[6].flatMap { parseMillis($0) } ?? Date()
             return TokenUsage(
                 id: id,
@@ -83,9 +94,54 @@ public actor OpenCodeClient {
                 promptTokens: input,
                 completionTokens: output,
                 estimatedCost: cost,
-                timestamp: date
+                timestamp: date,
+                rawTimeUpdated: timeUpdated
             )
         }
+    }
+
+    public func tokenUsagePage(after cursor: TokenCursor? = nil, limit: Int = 50) async throws -> [TokenUsage] {
+        let base = """
+            SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
+            FROM session
+            """
+        let sql: String
+        if let cursor {
+            let escapedID = escapeSQLString(cursor.id)
+            sql = base + """
+                 WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
+                 ORDER BY time_updated DESC, id DESC
+                 LIMIT \(limit)
+                 """
+        } else {
+            sql = base + " ORDER BY time_updated DESC, id DESC LIMIT \(limit)"
+        }
+        let rows = try executeReadOnly(sql)
+        return rows.compactMap { row in
+            guard let id = row[0],
+                  let project = row[1],
+                  let session = row[2],
+                  let timeUpdatedString = row[6],
+                  let timeUpdated = Double(timeUpdatedString) else { return nil }
+            let cost = row[3].flatMap { Double($0) } ?? 0
+            let input = row[4].flatMap { Int($0) } ?? 0
+            let output = row[5].flatMap { Int($0) } ?? 0
+            let date = parseMillis(timeUpdatedString) ?? Date()
+            return TokenUsage(
+                id: id,
+                project: project,
+                session: session,
+                promptTokens: input,
+                completionTokens: output,
+                estimatedCost: cost,
+                timestamp: date,
+                rawTimeUpdated: timeUpdated
+            )
+        }
+    }
+
+    private func escapeSQLString(_ value: String) -> String {
+        value.replacingOccurrences(of: "'", with: "''")
     }
 
     internal func executeReadOnly(_ sql: String) throws -> [[String?]] {

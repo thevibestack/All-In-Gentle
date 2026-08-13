@@ -1,0 +1,288 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "app.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All-In-Gentle" } },
+        "es": { "stringUnit": { "state": "translated", "value": "All-In-Gentle" } }
+      }
+    },
+    "tab.projects": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Projects" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Proyectos" } }
+      }
+    },
+    "tab.wiki": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Wiki" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Wiki" } }
+      }
+    },
+    "tab.services": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Services" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Servicios" } }
+      }
+    },
+    "tab.tokens": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tokens" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Tokens" } }
+      }
+    },
+    "tab.chat": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Chat" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Chat" } }
+      }
+    },
+    "tab.sessionCleaner": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Session Cleaner" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Limpiador de sesiones" } }
+      }
+    },
+    "projects.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Projects" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Proyectos" } }
+      }
+    },
+    "projects.search": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search projects" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar proyectos" } }
+      }
+    },
+    "projects.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No projects found" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se encontraron proyectos" } }
+      }
+    },
+    "wiki.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Wiki" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Wiki" } }
+      }
+    },
+    "wiki.search": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search memories" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Buscar memorias" } }
+      }
+    },
+    "wiki.preview": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Select an OpenSpec document to preview" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Selecciona un documento OpenSpec para previsualizar" } }
+      }
+    },
+    "services.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Services" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Servicios" } }
+      }
+    },
+    "services.safeRestart": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Safe Restart" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Reinicio seguro" } }
+      }
+    },
+    "services.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No services configured" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No hay servicios configurados" } }
+      }
+    },
+    "services.pid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "PID" } },
+        "es": { "stringUnit": { "state": "translated", "value": "PID" } }
+      }
+    },
+    "services.port": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Port" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Puerto" } }
+      }
+    },
+    "services.uptime": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Uptime" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Tiempo activo" } }
+      }
+    },
+    "services.running": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Running" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Activo" } }
+      }
+    },
+    "services.stopped": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Stopped" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Detenido" } }
+      }
+    },
+    "tokens.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tokens" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Tokens" } }
+      }
+    },
+    "tokens.export": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Export" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Exportar" } }
+      }
+    },
+    "tokens.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No token usage data" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No hay datos de uso de tokens" } }
+      }
+    },
+    "tokens.column.project": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Project" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Proyecto" } }
+      }
+    },
+    "tokens.column.session": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Session" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sesión" } }
+      }
+    },
+    "tokens.column.prompt": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Prompt" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Prompt" } }
+      }
+    },
+    "tokens.column.completion": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Completion" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Completado" } }
+      }
+    },
+    "tokens.column.total": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Total" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Total" } }
+      }
+    },
+    "tokens.column.cost": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Cost" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Costo" } }
+      }
+    },
+    "tokens.column.date": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Date" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Fecha" } }
+      }
+    },
+    "tokens.loadMore": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Load More" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cargar más" } }
+      }
+    },
+    "chat.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Chat" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Chat" } }
+      }
+    },
+    "chat.provider": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Provider" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Proveedor" } }
+      }
+    },
+    "chat.start": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Start a conversation" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Iniciar una conversación" } }
+      }
+    },
+    "chat.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Message" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Mensaje" } }
+      }
+    },
+    "sessionCleaner.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Session Cleaner" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Limpiador de sesiones" } }
+      }
+    },
+    "sessionCleaner.cleanUp": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Clean up" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Limpiar" } }
+      }
+    },
+    "sessionCleaner.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No sessions found" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se encontraron sesiones" } }
+      }
+    },
+    "sessionCleaner.tokens": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tokens" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Tokens" } }
+      }
+    },
+    "sessionCleaner.cost": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Cost" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Costo" } }
+      }
+    },
+    "sessionCleaner.latest": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Latest" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Último" } }
+      }
+    },
+    "sessionCleaner.sessions": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sessions" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sesiones" } }
+      }
+    },
+    "sessionCleaner.sessions.count": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "%d sessions" } },
+        "es": { "stringUnit": { "state": "translated", "value": "%d sesiones" } }
+      }
+    },
+    "badge.live": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Live" } },
+        "es": { "stringUnit": { "state": "translated", "value": "En vivo" } }
+      }
+    },
+    "badge.placeholder": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Coming soon" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Próximamente" } }
+      }
+    },
+    "badge.disabled": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Disabled" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Deshabilitado" } }
+      }
+    }
+  }
+}
