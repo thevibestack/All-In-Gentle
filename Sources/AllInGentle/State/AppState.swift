@@ -30,9 +30,20 @@ public final class AppState {
 
     private let preferences: PreferencesStore
 
-    public init(preferences: PreferencesStore = PreferencesStore()) {
+    public init(
+        preferences: PreferencesStore = PreferencesStore(),
+        migrator: ProviderConfigurationMigrator? = nil
+    ) {
         self.preferences = preferences
         self.showOnboarding = !(preferences.bool(for: .onboardingDismissed) || preferences.onboardingCompleted)
+
+        let migration = migrator ?? ProviderConfigurationMigrator(
+            preferences: preferences,
+            keychain: KeychainStore()
+        )
+        Task {
+            await migration.migrateIfNeeded()
+        }
     }
 
     /// Dismiss the onboarding sheet and persist the choice.
