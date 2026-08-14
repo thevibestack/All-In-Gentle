@@ -185,7 +185,7 @@ final class LLMServiceTests: XCTestCase {
             keychain: keychain,
             urlSession: makeMockURLSession()
         )
-        let viewModel = ChatViewModel(service: switcher)
+        let viewModel = ChatViewModel(service: switcher, preferences: store)
         viewModel.input = "Hi"
 
         await viewModel.send()
@@ -208,9 +208,8 @@ final class LLMServiceTests: XCTestCase {
 
         await viewModel.send()
 
-        XCTAssertEqual(viewModel.messages.count, 1)
-        XCTAssertEqual(viewModel.messages[0].role, .user)
-        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.messages.count, 0)
+        XCTAssertEqual(viewModel.errorMessage, L("chat.error.noProvider"))
         XCTAssertFalse(viewModel.isStreaming)
     }
 

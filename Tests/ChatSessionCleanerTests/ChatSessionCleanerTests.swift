@@ -6,13 +6,18 @@ final class ChatSessionCleanerTests: XCTestCase {
 
     // MARK: - Chat
 
+    // MARK: - Chat
+
     func testChatViewModelAppendsUserAndAssistantMessages() async {
         let service = MockLLMService(chunks: [
             ChatChunk(textDelta: "Hola"),
             ChatChunk(textDelta: " mundo"),
             ChatChunk(textDelta: nil, finishReason: "stop")
         ])
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(
+            service: service,
+            preferences: configuredPreferences()
+        )
         viewModel.input = "Hi"
 
         await viewModel.send()
@@ -28,7 +33,10 @@ final class ChatSessionCleanerTests: XCTestCase {
 
     func testChatViewModelSurfacesStreamError() async {
         let service = FailingLLMService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(
+            service: service,
+            preferences: configuredPreferences()
+        )
         viewModel.input = "Hello"
 
         await viewModel.send()
@@ -41,7 +49,10 @@ final class ChatSessionCleanerTests: XCTestCase {
 
     func testChatViewModelIgnoresEmptyInput() async {
         let service = MockLLMService(chunks: [])
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(
+            service: service,
+            preferences: configuredPreferences()
+        )
         viewModel.input = "   "
 
         await viewModel.send()
@@ -130,11 +141,18 @@ final class ChatSessionCleanerTests: XCTestCase {
 
         XCTAssertEqual(viewModel.groups.map(\.id), ["alpha", "zebra"])
     }
+
+    private func configuredPreferences() -> PreferencesStore {
+        let defaults = UserDefaults(suiteName: "chat-session-cleaner-tests-\(UUID().uuidString)")!
+        let store = PreferencesStore(defaults: defaults)
+        store.llmProviderConfiguration = LLMProviderConfiguration.deepseekDefault(id: "test")
+        return store
+    }
 }
 
 // MARK: - Test doubles
 
-private struct MockLLMService: LLMService {
+struct MockLLMService: LLMService {
     let chunks: [ChatChunk]
 
     func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
@@ -147,7 +165,7 @@ private struct MockLLMService: LLMService {
     }
 }
 
-private struct FailingLLMService: LLMService {
+struct FailingLLMService: LLMService {
     func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
         throw AllInGentleError.sourceUnavailable("network down")
     }
