@@ -8,7 +8,15 @@ public final class AppState {
     public var selectedItem: AppTab = .projects
 
     /// Currently selected project path for cross-tab context.
-    public var selectedProjectPath: String? = nil
+    public var selectedProjectPath: String? = nil {
+        didSet {
+            if let selectedProjectPath {
+                preferences.set(selectedProjectPath, for: .lastProjectPath)
+            } else {
+                preferences.removeValue(for: .lastProjectPath)
+            }
+        }
+    }
 
     /// Health snapshot for monitored services keyed by service identifier.
     public var servicesHealthSnapshot: [String: ServiceHealthSnapshot] = [:]
@@ -36,6 +44,7 @@ public final class AppState {
     ) {
         self.preferences = preferences
         self.showOnboarding = !(preferences.bool(for: .onboardingDismissed) || preferences.onboardingCompleted)
+        self.selectedProjectPath = preferences.string(for: .lastProjectPath)
 
         let migration = migrator ?? ProviderConfigurationMigrator(
             preferences: preferences,
