@@ -52,6 +52,14 @@ public final class ProjectsViewModel {
     public var errorMessage: String?
     public var searchQuery: String = ""
 
+    public var selection: ProjectItem? = nil {
+        didSet {
+            onSelectionChange?(selection?.path)
+        }
+    }
+
+    public var onSelectionChange: ((String?) -> Void)?
+
     public var filteredItems: [ProjectItem] {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return items }
@@ -62,9 +70,19 @@ public final class ProjectsViewModel {
     }
 
     private let providers: [any ProjectSourceProvider]
+    private let store: any ProjectStoring
+    private var initialSelectedPath: String?
 
-    public init(providers: [any ProjectSourceProvider]) {
+    public init(
+        providers: [any ProjectSourceProvider],
+        store: any ProjectStoring = ProjectStore(),
+        initialSelectedPath: String? = nil,
+        onSelectionChange: ((String?) -> Void)? = nil
+    ) {
         self.providers = providers
+        self.store = store
+        self.initialSelectedPath = initialSelectedPath
+        self.onSelectionChange = onSelectionChange
     }
 
     public convenience init(
@@ -91,43 +109,68 @@ public final class ProjectsViewModel {
     }
 
     public func load() async {
-        isLoading = true
-        defer { isLoading = false }
-
-        var allProjects: [Project] = []
-        var messages: [String] = []
-
-        await withTaskGroup(of: LoadResult.self) { group in
-            for provider in providers {
-                group.addTask { await Self.fetchProjects(from: provider) }
-            }
-            for await result in group {
-                switch result {
-                case .success(let projects):
-                    allProjects.append(contentsOf: projects)
-                case .failure(let message):
-                    messages.append(message)
-                }
-            }
-        }
-
-        items = merge(allProjects)
-        errorMessage = items.isEmpty && !messages.isEmpty ? messages.joined(separator: "\n") : nil
+        await load(initialSelectedPath: initialSelectedPath)
     }
 
-    private func merge(_ projects: [Project]) -> [ProjectItem] {
-        let grouped = Dictionary(grouping: projects, by: \.path)
-        return grouped.map { path, projects in
-            let openCode = projects.first { $0.source == .opencode }
-            let name: String
-            if let openCode, !openCode.name.isEmpty {
-                name = openCode.name
-            } else {
-                name = (path as NSString).lastPathComponent
+    public func load(initialSelectedPath: String?) async {
+        isLoading = true
+        defer { isLoading = false }
+        self.initialSelectedPath = initialSelectedPath
+
+        do {
+            let stored = try await store.loadAll()
+            var merged = stored.map { ProjectItem(id: $0.id, path: $0.path, name: $0.name, sources: $0.sources) }
+            var messages: [String] = []
+
+            await withTaskGroup(of: LoadResult.self) { group in
+                for provider in providers {
+                    group.addTask { await Self.fetchProjects(from: provider) }
+                }
+                for await result in group {
+                    switch result {
+                    case .success(let projects):
+                        merged = merge(providers: projects, into: merged)
+                    case .failure(let message):
+                        messages.append(message)
+                    }
+                }
             }
-            let sourceSet = Set(projects.map(\.source))
-            let sources = Project.Source.allCases.filter { sourceSet.contains($0) }
-            return ProjectItem(id: path, path: path, name: name, sources: sources)
+
+            items = merged
+            for item in items {
+                try? await store.save(StoredProject(id: item.id, name: item.name, path: item.path, sources: item.sources))
+            }
+            restoreSelectionIfNeeded()
+            errorMessage = items.isEmpty && !messages.isEmpty ? messages.joined(separator: "\n") : nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func restoreSelectionIfNeeded() {
+        guard let path = initialSelectedPath else { return }
+        let normalized = ProjectPathNormalizer.normalize(path)
+        selection = items.first { ProjectPathNormalizer.normalize($0.path) == normalized }
+        initialSelectedPath = nil
+    }
+
+    private func merge(providers projects: [Project], into existing: [ProjectItem]) -> [ProjectItem] {
+        var byPath: [String: (name: String, sources: Set<Project.Source>)] = [:]
+        for item in existing {
+            byPath[item.path] = (name: item.name, sources: Set(item.sources))
+        }
+        for project in projects {
+            let path = ProjectPathNormalizer.normalize(project.path)
+            var entry = byPath[path] ?? (name: (path as NSString).lastPathComponent, sources: [])
+            if project.source == .opencode, !project.name.isEmpty {
+                entry.name = project.name
+            }
+            entry.sources.insert(project.source)
+            byPath[path] = entry
+        }
+        return byPath.map { path, entry in
+            let sources = Project.Source.allCases.filter { entry.sources.contains($0) }
+            return ProjectItem(id: path, path: path, name: entry.name, sources: sources)
         }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 

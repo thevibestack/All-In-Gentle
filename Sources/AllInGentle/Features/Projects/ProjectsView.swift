@@ -5,25 +5,30 @@ struct ProjectsView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        NavigationStack {
+        NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
                 searchField
-                content
+                sidebarContent
             }
-            .navigationTitle(L("projects.title"))
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: AGSpacing.xSmall) {
-                        AGButton("projects.addProject", systemImage: "plus", variant: .secondary, action: {})
-                            .disabled(true)
-                        AGStatusBadge(status: .placeholder)
-                    }
+        } detail: {
+            detailContent
+        }
+        .navigationTitle(L("projects.title"))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                HStack(spacing: AGSpacing.xSmall) {
+                    AGButton("projects.addProject", systemImage: "plus", variant: .secondary, action: {})
+                        .disabled(true)
+                    AGStatusBadge(status: .placeholder)
                 }
             }
-            .task { await viewModel.load() }
-            .onChange(of: appState.globalSearchQuery) { _, new in
-                viewModel.searchQuery = new
-            }
+        }
+        .task {
+            viewModel.onSelectionChange = { appState.selectedProjectPath = $0 }
+            await viewModel.load(initialSelectedPath: appState.selectedProjectPath)
+        }
+        .onChange(of: appState.globalSearchQuery) { _, new in
+            viewModel.searchQuery = new
         }
     }
 
@@ -33,7 +38,7 @@ struct ProjectsView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private var sidebarContent: some View {
         if viewModel.isLoading && viewModel.items.isEmpty {
             AGLoadingState(titleKey: "ds.state.loading")
         } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
@@ -48,14 +53,29 @@ struct ProjectsView: View {
                 messageKey: "projects.empty.message"
             )
         } else {
-            List(viewModel.filteredItems) { item in
-                AGListRow {
-                    ProjectRow(item: item)
+            List(selection: $viewModel.selection) {
+                ForEach(viewModel.filteredItems) { item in
+                    AGListRow {
+                        ProjectRow(item: item)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: AGSpacing.medium, bottom: 0, trailing: AGSpacing.medium))
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: AGSpacing.medium, bottom: 0, trailing: AGSpacing.medium))
             }
             .scrollContentBackground(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        if let selected = viewModel.selection {
+            ProjectDetailView(project: selected)
+        } else {
+            AGEmptyState(
+                systemImage: "folder",
+                titleKey: "projectDetail.empty.title",
+                messageKey: "projectDetail.empty.message"
+            )
         }
     }
 }
@@ -81,7 +101,7 @@ private struct ProjectRow: View {
     }
 }
 
-private struct SourceBadge: View {
+struct SourceBadge: View {
     let source: Project.Source
 
     var body: some View {
