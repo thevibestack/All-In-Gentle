@@ -46,6 +46,10 @@
 "projects.empty.message" = "Agrega un proyecto o revisa tus integraciones.";
 "wiki.empty.title" = "Ningún documento seleccionado";
 "wiki.empty.message" = "Elige un documento de la lista para previsualizarlo.";
+"wiki.noProject.title" = "Ningún proyecto seleccionado";
+"wiki.noProject.message" = "Elegí un proyecto en la pestaña Proyectos para ver su wiki.";
+"wiki.noData.title" = "Sin datos en la wiki";
+"wiki.noData.message" = "Este proyecto no tiene documentos OpenSpec ni memorias coincidentes.";
 "wiki.loading" = "Escaneando documentos...";
 "wiki.previewActions" = "Acciones de vista previa";
 "services.empty.message" = "Agrega servicios en ajustes o revisa los permisos.";
@@ -141,3 +145,9 @@
 "settings.ai.error.invalidURL" = "Ingresá una URL HTTP o HTTPS válida.";
 "settings.ai.error.displayNameRequired" = "El nombre visible es obligatorio.";
 "settings.ai.error.modelRequired" = "El nombre del modelo es obligatorio.";
+"projectDetail.empty.title" = "Ningún proyecto seleccionado";
+"projectDetail.empty.message" = "Elegí un proyecto de la barra lateral para ver los detalles.";
+"projectDetail.memories.title" = "Memorias";
+"projectDetail.memories.empty" = "No se encontraron memorias para este proyecto.";
+"projectDetail.documents.title" = "Documentos";
+"projectDetail.documents.empty" = "No se encontraron documentos OpenSpec para este proyecto.";

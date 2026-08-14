@@ -20,7 +20,14 @@ struct WikiView: View {
                 }
             }
         }
-        .task { await viewModel.loadDocuments() }
+        .task {
+            viewModel.selectedProjectPath = appState.selectedProjectPath
+            viewModel.loadDocuments(forProjectPath: appState.selectedProjectPath)
+        }
+        .onChange(of: appState.selectedProjectPath) { _, new in
+            viewModel.selectedProjectPath = new
+            viewModel.loadDocuments(forProjectPath: new)
+        }
         .onChange(of: appState.globalSearchQuery) { _, new in
             viewModel.searchQuery = new
         }
@@ -31,19 +38,27 @@ struct WikiView: View {
             AGSearchField(text: $viewModel.searchQuery, placeholderKey: "wiki.search")
                 .padding(AGSpacing.medium)
 
-            if viewModel.isLoadingDocuments && viewModel.documents.isEmpty {
-                AGLoadingState(titleKey: "wiki.loading")
-            } else if let _ = viewModel.errorMessage, viewModel.documents.isEmpty {
-                AGErrorState(
-                    message: viewModel.errorMessage ?? L("ds.state.error.message"),
-                    retry: { Task { await viewModel.loadDocuments() } }
-                )
-            } else if viewModel.documents.isEmpty {
+            if appState.selectedProjectPath == nil {
                 AGEmptyState(
-                    systemImage: "books.vertical",
-                    titleKey: "wiki.empty.title",
-                    messageKey: "wiki.empty.message"
+                    systemImage: "folder.badge.questionmark",
+                    titleKey: "wiki.noProject.title",
+                    messageKey: "wiki.noProject.message"
                 )
+            } else if viewModel.isLoadingDocuments && viewModel.documents.isEmpty && viewModel.results.isEmpty {
+                AGLoadingState(titleKey: "wiki.loading")
+            } else if viewModel.documents.isEmpty && viewModel.results.isEmpty {
+                if let _ = viewModel.errorMessage {
+                    AGErrorState(
+                        message: viewModel.errorMessage ?? L("ds.state.error.message"),
+                        retry: { viewModel.loadDocuments() }
+                    )
+                } else {
+                    AGEmptyState(
+                        systemImage: "books.vertical",
+                        titleKey: "wiki.noData.title",
+                        messageKey: "wiki.noData.message"
+                    )
+                }
             } else {
                 memoriesList
                 Divider()
@@ -104,11 +119,7 @@ struct WikiView: View {
                     AGLoadingState(titleKey: "ds.state.loading")
                 } else {
                     AGCard {
-                        Text(viewModel.previewText)
-                            .font(AGTypography.mono)
-                            .foregroundStyle(AGColors.textPrimary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        MarkdownText(viewModel.previewText)
                     }
                     .padding(AGSpacing.medium)
                 }
