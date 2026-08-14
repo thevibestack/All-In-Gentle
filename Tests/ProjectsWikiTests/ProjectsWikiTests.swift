@@ -10,11 +10,20 @@ struct StubProjectSourceProvider: ProjectSourceProvider {
     }
 }
 
-struct StubEngramSearchProvider: EngramSearchProvider {
+final class StubEngramSearchProvider: EngramSearchProvider, @unchecked Sendable {
     var results: [MemoryObservation] = []
+    var lastQuery: String?
+    var lastProject: String?
 
     func search(query: String, limit: Int) async throws -> [MemoryObservation] {
-        results
+        lastQuery = query
+        return results
+    }
+
+    func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
+        lastQuery = query
+        lastProject = project
+        return results
     }
 }
 
@@ -51,7 +60,7 @@ final class ProjectsWikiTests: XCTestCase {
             StubProjectSourceProvider(projects: [openCode]),
             StubProjectSourceProvider(projects: [codeGraph])
         ]
-        let viewModel = ProjectsViewModel(providers: providers)
+        let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()
 
         XCTAssertEqual(viewModel.items.count, 1)
@@ -78,7 +87,7 @@ final class ProjectsWikiTests: XCTestCase {
             StubProjectSourceProvider(projects: [openCode]),
             StubProjectSourceProvider(projects: [codeGraph])
         ]
-        let viewModel = ProjectsViewModel(providers: providers)
+        let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()
 
         XCTAssertEqual(viewModel.items.first?.name, "Custom Name")
@@ -112,13 +121,14 @@ final class ProjectsWikiTests: XCTestCase {
             project: "p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider(results: [observation])
+        let engram = StubEngramSearchProvider()
+        engram.results = [observation]
         let scanner = StubOpenSpecScanning()
         let viewModel = WikiViewModel(
             engram: engram,
-            scanner: scanner,
-            openspecRoot: "/tmp"
+            scanner: scanner
         )
+        viewModel.selectedProjectPath = "/projects/p1"
 
         viewModel.searchQuery = "hello"
         XCTAssertEqual(viewModel.results.count, 0)
@@ -130,6 +140,7 @@ final class ProjectsWikiTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.title, "Found")
+        XCTAssertEqual(engram.lastProject, "/projects/p1")
         XCTAssertFalse(viewModel.isSearching)
     }
 
@@ -145,11 +156,11 @@ final class ProjectsWikiTests: XCTestCase {
         )
         let viewModel = WikiViewModel(
             engram: StubEngramSearchProvider(),
-            scanner: scanner,
-            openspecRoot: "/tmp"
+            scanner: scanner
         )
 
-        await viewModel.loadDocuments()
+        viewModel.loadDocuments(forProjectPath: "/tmp")
+        try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(viewModel.documents.count, 1)
 
         viewModel.selectDocument(document)

@@ -3,6 +3,17 @@ import Observation
 
 public protocol EngramSearchProvider: Sendable {
     func search(query: String, limit: Int) async throws -> [MemoryObservation]
+    func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation]
+}
+
+extension EngramSearchProvider {
+    public func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
+        let results = try await search(query: query, limit: limit)
+        if let project {
+            return results.filter { $0.project == project }
+        }
+        return results
+    }
 }
 
 extension EngramClient: EngramSearchProvider {}
@@ -21,6 +32,10 @@ public final class WikiViewModel {
         didSet { scheduleSearch() }
     }
 
+    public var selectedProjectPath: String? = nil {
+        didSet { scheduleSearch() }
+    }
+
     public private(set) var results: [MemoryObservation] = []
     public private(set) var documents: [OpenSpecScanner.Document] = []
     public var selectedDocument: OpenSpecScanner.Document?
@@ -31,40 +46,35 @@ public final class WikiViewModel {
 
     private let engram: any EngramSearchProvider
     private let scanner: any OpenSpecScanning
-    private let openspecRoot: String
     private var searchTask: Task<Void, Never>?
+    private var loadTask: Task<Void, Never>?
     private var previewTask: Task<Void, Never>?
 
     public init(
         engram: any EngramSearchProvider,
-        scanner: any OpenSpecScanning,
-        openspecRoot: String
+        scanner: any OpenSpecScanning
     ) {
         self.engram = engram
         self.scanner = scanner
-        self.openspecRoot = openspecRoot
     }
 
     public convenience init(
-        engramBaseURL: URL = URL(string: "http://127.0.0.1:7437")!,
-        openspecRoot: String? = nil
+        engramBaseURL: URL = URL(string: "http://127.0.0.1:7437")!
     ) {
-        let root = Self.resolvePath(openspecRoot) ?? Self.defaultHomePath()
         self.init(
             engram: EngramClient(baseURL: engramBaseURL),
-            scanner: OpenSpecScanner(),
-            openspecRoot: root
+            scanner: OpenSpecScanner()
         )
     }
 
-    public func loadDocuments() async {
-        isLoadingDocuments = true
-        defer { isLoadingDocuments = false }
-        do {
-            documents = try await scanner.scan(root: openspecRoot)
-        } catch {
-            documents = []
-            errorMessage = error.localizedDescription
+    public func loadDocuments() {
+        loadDocuments(forProjectPath: selectedProjectPath)
+    }
+
+    public func loadDocuments(forProjectPath path: String?) {
+        loadTask?.cancel()
+        loadTask = Task { [weak self] in
+            await self?.performLoadDocuments(forProjectPath: path)
         }
     }
 
@@ -83,10 +93,34 @@ public final class WikiViewModel {
         }
     }
 
+    private func performLoadDocuments(forProjectPath path: String?) async {
+        isLoadingDocuments = true
+        errorMessage = nil
+        defer { if !Task.isCancelled { isLoadingDocuments = false } }
+
+        documents = []
+        selectedDocument = nil
+        previewText = ""
+        guard let path else { return }
+
+        do {
+            try Task.checkCancellation()
+            let normalized = ProjectPathNormalizer.normalize(path)
+            let scanned = try await scanner.scan(root: normalized)
+            try Task.checkCancellation()
+            documents = scanned.filter { $0.path.hasPrefix(normalized) }
+        } catch {
+            guard !Task.isCancelled else { return }
+            documents = []
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func scheduleSearch() {
         searchTask?.cancel()
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else {
+        let project = selectedProjectPath
+        guard !query.isEmpty, project != nil else {
             results = []
             isSearching = false
             return
@@ -96,27 +130,18 @@ public final class WikiViewModel {
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard let self, !Task.isCancelled else { return }
-            await self.performSearch(query: query)
+            await self.performSearch(query: query, project: project)
         }
     }
 
-    private func performSearch(query: String) async {
+    private func performSearch(query: String, project: String?) async {
         defer { isSearching = false }
         do {
-            results = try await engram.search(query: query, limit: 50)
+            results = try await engram.search(query: query, limit: 50, project: project)
         } catch {
             guard !Task.isCancelled else { return }
             results = []
             errorMessage = error.localizedDescription
         }
-    }
-
-    private static func resolvePath(_ path: String?) -> String? {
-        guard let path else { return nil }
-        return (path as NSString).expandingTildeInPath
-    }
-
-    private static func defaultHomePath() -> String {
-        FileManager.default.homeDirectoryForCurrentUser.path
     }
 }
