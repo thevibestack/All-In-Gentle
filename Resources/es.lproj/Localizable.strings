@@ -145,6 +145,7 @@
 "settings.ai.error.invalidURL" = "Ingresá una URL HTTP o HTTPS válida.";
 "settings.ai.error.displayNameRequired" = "El nombre visible es obligatorio.";
 "settings.ai.error.modelRequired" = "El nombre del modelo es obligatorio.";
+"settings.ai.error.keychainLoadFailed" = "No se pudo leer la clave de API del llavero.";
 "projectDetail.empty.title" = "Ningún proyecto seleccionado";
 "projectDetail.empty.message" = "Elegí un proyecto de la barra lateral para ver los detalles.";
 "projectDetail.memories.title" = "Memorias";
