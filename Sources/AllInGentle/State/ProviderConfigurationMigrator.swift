@@ -27,10 +27,12 @@ public actor ProviderConfigurationMigrator {
     /// - Copies the legacy API key into the new provider Keychain account so
     ///   future settings edits and the provider adapter can share the same key.
     /// - Leaves the legacy key in place for safety.
+    /// - Only persists the configuration AFTER the key copy succeeds; on
+    ///   failure the config stays nil and the guard retries next launch.
     public func migrateIfNeeded() async {
         guard preferences.llmProviderConfiguration == nil else { return }
 
-        guard let apiKey = await keychain.load(key: Self.legacyDeepSeekAccount), !apiKey.isEmpty else {
+        guard let apiKey = try? await keychain.load(key: Self.legacyDeepSeekAccount), !apiKey.isEmpty else {
             return
         }
 

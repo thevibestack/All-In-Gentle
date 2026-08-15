@@ -198,8 +198,12 @@ public struct AISettingsView: View {
     private func load() async {
         guard let existing = store.llmProviderConfiguration else { return }
         draft = existing
-        if let key = await keychain.load(key: existing.apiKeyAccount) {
-            apiKey = key
+        do {
+            if let key = try await keychain.load(key: existing.apiKeyAccount) {
+                apiKey = key
+            }
+        } catch {
+            validationMessage = error.localizedDescription
         }
     }
 
