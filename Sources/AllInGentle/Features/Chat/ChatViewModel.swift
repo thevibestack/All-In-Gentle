@@ -229,11 +229,38 @@ public final class ChatViewModel {
     /// the selected session, creating a session automatically if needed.
     public func send() async {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let session = await prepareUserMessage(text: text) else { return }
+        await streamResponse(for: session)
+    }
+
+    /// Re-streams the last persisted user message of the selected session.
+    ///
+    /// Never appends or persists a new user message. No-op when no provider
+    /// is configured or no persisted user message exists.
+    public func retryLastSend() async {
+        guard !isStreaming, providerAvailable else {
+            if !providerAvailable {
+                errorMessage = L("chat.error.noProvider")
+            }
+            return
+        }
+        guard let session = selectedSession,
+              session.messages.last(where: { $0.role == .user }) != nil else { return }
+        errorMessage = nil
+        isStreaming = true
+        await streamResponse(for: session)
+    }
+
+    // MARK: - Private streaming helpers
+
+    /// Persists the user's trimmed input into the selected session, creating
+    /// one automatically if needed, and returns the session ready to stream.
+    private func prepareUserMessage(text: String) async -> ChatSession? {
         guard !text.isEmpty, !isStreaming, providerAvailable else {
             if !text.isEmpty, !providerAvailable {
                 errorMessage = L("chat.error.noProvider")
             }
-            return
+            return nil
         }
 
         errorMessage = nil
@@ -246,7 +273,7 @@ public final class ChatViewModel {
 
         guard var session = selectedSession else {
             isStreaming = false
-            return
+            return nil
         }
 
         let userMessage = ChatMessage(
@@ -262,9 +289,16 @@ public final class ChatViewModel {
         } catch {
             errorMessage = error.localizedDescription
             isStreaming = false
-            return
+            return nil
         }
 
+        return session
+    }
+
+    /// Streams the assistant reply for the given session, finalizing it by the
+    /// session id captured before the generation task starts.
+    private func streamResponse(for session: ChatSession) async {
+        let sessionID = session.id
         var assistantMessage: ChatMessage?
         var responseText = ""
 
@@ -282,12 +316,12 @@ public final class ChatViewModel {
                                 content: responseText
                             )
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: session.id, message: message)
+                                appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         } else {
                             assistantMessage?.content = responseText
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: session.id, message: message)
+                                appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         }
                     }
@@ -295,11 +329,11 @@ public final class ChatViewModel {
                         break
                     }
                 }
-                await finalizeSession(sessionID: session.id, assistantMessage: assistantMessage)
+                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch is CancellationError {
-                await finalizeSession(sessionID: session.id, assistantMessage: assistantMessage)
+                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch {
-                await removeEmptyAssistantMessage(sessionID: session.id, assistantMessage: assistantMessage)
+                await removeEmptyAssistantMessage(sessionID: sessionID, assistantMessage: assistantMessage)
                 await MainActor.run { self.errorMessage = error.localizedDescription }
             }
             await MainActor.run {
@@ -352,7 +386,9 @@ public final class ChatViewModel {
 
     @MainActor
     private func finalizeSession(sessionID: String, assistantMessage: ChatMessage?) async {
-        guard var finalSession = selectedSession, let assistantMessage else { return }
+        guard let sessionIndex = sessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        var finalSession = sessions[sessionIndex]
+        guard let assistantMessage else { return }
         if let index = finalSession.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
             finalSession.messages[index] = assistantMessage
         } else {
@@ -368,7 +404,8 @@ public final class ChatViewModel {
 
     @MainActor
     private func removeEmptyAssistantMessage(sessionID: String, assistantMessage: ChatMessage?) async {
-        guard var finalSession = selectedSession else { return }
+        guard let sessionIndex = sessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        var finalSession = sessions[sessionIndex]
         if let assistantMessage {
             finalSession.messages.removeAll { $0.id == assistantMessage.id && $0.content.isEmpty }
         }
