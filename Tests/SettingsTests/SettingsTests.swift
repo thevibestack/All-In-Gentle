@@ -24,10 +24,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(config?.model, "deepseek-chat")
         XCTAssertEqual(config?.apiKeyReference, "all-in-gentle.provider.deepseek.api-key")
 
-        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = try await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertEqual(migratedKey, "sk-legacy")
 
-        let legacyKeyStillPresent = await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
+        let legacyKeyStillPresent = try await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
         XCTAssertEqual(legacyKeyStillPresent, "sk-legacy")
     }
 
@@ -56,7 +56,7 @@ final class SettingsTests: XCTestCase {
 
         XCTAssertEqual(store.llmProviderConfiguration?.displayName, "Custom")
 
-        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = try await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertNil(migratedKey)
     }
 
@@ -263,16 +263,34 @@ private final class MockURLProtocol: URLProtocol {
 
 private actor MockKeychain: KeychainStoring {
     private var storage: [String: String] = [:]
+    private var failNextSave = false
+    private var failNextLoad = false
+
+    func setFailNextSave() {
+        failNextSave = true
+    }
+
+    func setFailNextLoad() {
+        failNextLoad = true
+    }
 
     func save(key: String, value: String) throws {
+        if failNextSave {
+            failNextSave = false
+            throw AllInGentleError.persistenceFailure("Mock keychain save failure")
+        }
         storage[key] = value
     }
 
-    func load(key: String) -> String? {
-        storage[key]
+    func load(key: String) throws -> String? {
+        if failNextLoad {
+            failNextLoad = false
+            throw AllInGentleError.persistenceFailure("Mock keychain load failure")
+        }
+        return storage[key]
     }
 
-    func delete(key: String) {
+    func delete(key: String) throws {
         storage[key] = nil
     }
 }

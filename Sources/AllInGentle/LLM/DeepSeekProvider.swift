@@ -17,7 +17,15 @@ public actor DeepSeekProvider: LLMService {
     }
 
     public func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
-        guard let apiKey = await keychain.load(key: configuration.apiKeyAccount), !apiKey.isEmpty else {
+        let apiKey: String
+        do {
+            apiKey = try await keychain.load(key: configuration.apiKeyAccount) ?? ""
+        } catch {
+            throw AllInGentleError.invalidConfiguration(
+                "Keychain error reading API key for provider '\(configuration.displayName)': \(error.localizedDescription)"
+            )
+        }
+        guard !apiKey.isEmpty else {
             throw AllInGentleError.invalidConfiguration(
                 "API key not found in keychain for provider '\(configuration.displayName)'"
             )

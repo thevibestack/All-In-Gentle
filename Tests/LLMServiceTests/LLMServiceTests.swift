@@ -213,6 +213,30 @@ final class LLMServiceTests: XCTestCase {
         XCTAssertFalse(viewModel.isStreaming)
     }
 
+    func testDeepSeekProviderSurfacesKeychainError() async throws {
+        let config = LLMProviderConfiguration.deepseekDefault(id: "test")
+        let keychain = MockKeychain()
+        await keychain.setFailNextLoad()
+        let provider = DeepSeekProvider(configuration: config, keychain: keychain)
+
+        do {
+            let stream = try await provider.stream(messages: [])
+            for try await _ in stream {}
+            XCTFail("Expected stream to throw")
+        } catch let error as AllInGentleError {
+            guard case .invalidConfiguration(let message) = error else {
+                XCTFail("Expected invalidConfiguration error, got \(error)")
+                return
+            }
+            XCTAssertTrue(
+                message.contains("Keychain error"),
+                "Expected keychain diagnostic, got: \(message)"
+            )
+        } catch {
+            XCTFail("Expected AllInGentleError, got \(error)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func makeEphemeralDefaults() -> UserDefaults {
@@ -247,16 +271,34 @@ final class LLMServiceTests: XCTestCase {
 
 private actor MockKeychain: KeychainStoring {
     private var storage: [String: String] = [:]
+    private var failNextSave = false
+    private var failNextLoad = false
+
+    func setFailNextSave() {
+        failNextSave = true
+    }
+
+    func setFailNextLoad() {
+        failNextLoad = true
+    }
 
     func save(key: String, value: String) throws {
+        if failNextSave {
+            failNextSave = false
+            throw AllInGentleError.persistenceFailure("Mock keychain save failure")
+        }
         storage[key] = value
     }
 
-    func load(key: String) -> String? {
-        storage[key]
+    func load(key: String) throws -> String? {
+        if failNextLoad {
+            failNextLoad = false
+            throw AllInGentleError.persistenceFailure("Mock keychain load failure")
+        }
+        return storage[key]
     }
 
-    func delete(key: String) {
+    func delete(key: String) throws {
         storage[key] = nil
     }
 }
