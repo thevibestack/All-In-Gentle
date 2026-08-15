@@ -41,13 +41,14 @@ public actor ProviderConfigurationMigrator {
             apiKeyReference: LLMProviderConfiguration.keychainAccount(for: "deepseek")
         )
 
-        preferences.llmProviderConfiguration = config
-
         do {
             try await keychain.save(key: config.apiKeyAccount, value: apiKey)
         } catch {
-            // Persist the config even if the key copy fails; the user can re-enter
-            // the key in Settings if necessary.
+            // Config stays nil and the legacy key stays in place; the guard
+            // re-runs on the next launch.
+            return
         }
+
+        preferences.llmProviderConfiguration = config
     }
 }
