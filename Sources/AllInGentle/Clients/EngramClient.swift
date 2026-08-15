@@ -38,24 +38,10 @@ public actor EngramClient {
     }
 
     public func search(query: String, limit: Int = 20) async throws -> [MemoryObservation] {
-        guard var components = URLComponents(
-            url: baseURL.appendingPathComponent("search"),
-            resolvingAgainstBaseURL: true
-        ) else {
-            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
-        }
-        components.queryItems = [
+        try await fetchSearchResults(queryItems: [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "limit", value: String(limit))
-        ]
-        guard let url = components.url else {
-            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
-        }
-        let (data, response) = try await urlSession.data(from: url)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw AllInGentleError.sourceUnavailable("Engram search failed")
-        }
-        return try parseObservations(data)
+        ])
     }
 
     public func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
@@ -65,25 +51,11 @@ public actor EngramClient {
         guard !query.isEmpty else {
             throw AllInGentleError.invalidConfiguration("Engram search requires non-empty q")
         }
-        guard var components = URLComponents(
-            url: baseURL.appendingPathComponent("search"),
-            resolvingAgainstBaseURL: true
-        ) else {
-            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
-        }
-        components.queryItems = [
+        return try await fetchSearchResults(queryItems: [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "project", value: projectName(from: project)),
             URLQueryItem(name: "limit", value: String(limit))
-        ]
-        guard let url = components.url else {
-            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
-        }
-        let (data, response) = try await urlSession.data(from: url)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw AllInGentleError.sourceUnavailable("Engram search failed")
-        }
-        return try parseObservations(data)
+        ])
     }
 
     public func observations(project: String, limit: Int = 20) async throws -> [MemoryObservation] {
@@ -107,6 +79,24 @@ public actor EngramClient {
                 lastModified: nil
             )
         }
+    }
+
+    private func fetchSearchResults(queryItems: [URLQueryItem]) async throws -> [MemoryObservation] {
+        guard var components = URLComponents(
+            url: baseURL.appendingPathComponent("search"),
+            resolvingAgainstBaseURL: true
+        ) else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw AllInGentleError.sourceUnavailable("Engram search failed")
+        }
+        return try parseObservations(data)
     }
 
     private func fetchObservations(project: String?, limit: Int) async throws -> [MemoryObservation] {
