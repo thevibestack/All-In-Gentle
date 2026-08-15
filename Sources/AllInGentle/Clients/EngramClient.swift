@@ -58,9 +58,36 @@ public actor EngramClient {
         return try parseObservations(data)
     }
 
+    public func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
+        guard let project else {
+            return try await search(query: query, limit: limit)
+        }
+        guard !query.isEmpty else {
+            throw AllInGentleError.invalidConfiguration("Engram search requires non-empty q")
+        }
+        guard var components = URLComponents(
+            url: baseURL.appendingPathComponent("search"),
+            resolvingAgainstBaseURL: true
+        ) else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
+        }
+        components.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "project", value: projectName(from: project)),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        guard let url = components.url else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw AllInGentleError.sourceUnavailable("Engram search failed")
+        }
+        return try parseObservations(data)
+    }
+
     public func observations(project: String, limit: Int = 20) async throws -> [MemoryObservation] {
-        let all = try await search(query: project, limit: limit)
-        return all.filter { $0.project == project }
+        try await fetchObservations(project: project, limit: limit)
     }
 
     public func projects() async throws -> [Project] {
@@ -68,7 +95,7 @@ public actor EngramClient {
     }
 
     public func projects(limit: Int = 1000) async throws -> [Project] {
-        let observations = try await search(query: "", limit: limit)
+        let observations = try await fetchObservations(project: nil, limit: limit)
         let projectNames = observations.compactMap(\.project)
         let unique = Set(projectNames)
         return unique.sorted().map { name in
@@ -80,6 +107,34 @@ public actor EngramClient {
                 lastModified: nil
             )
         }
+    }
+
+    private func fetchObservations(project: String?, limit: Int) async throws -> [MemoryObservation] {
+        guard var components = URLComponents(
+            url: baseURL.appendingPathComponent("observations"),
+            resolvingAgainstBaseURL: true
+        ) else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram observations URL")
+        }
+        var queryItems: [URLQueryItem] = []
+        if let project {
+            queryItems.append(URLQueryItem(name: "project", value: projectName(from: project)))
+        }
+        queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        components.queryItems = queryItems
+        guard let url = components.url else {
+            throw AllInGentleError.invalidConfiguration("Invalid Engram observations URL")
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw AllInGentleError.sourceUnavailable("Engram observations failed")
+        }
+        return try parseObservations(data)
+    }
+
+    /// Server-side filters identify projects by name, derived from the last path component (D6).
+    private func projectName(from path: String) -> String {
+        (path as NSString).lastPathComponent
     }
 
     private func parseObservations(_ data: Data) throws -> [MemoryObservation] {
