@@ -95,7 +95,7 @@ final class SettingsTests: XCTestCase {
 
     // MARK: - Connection test (F9)
 
-    func testConnectionSuccessUsesDraftConfigAndRestoresKeychain() async {
+    func testConnectionSuccessUsesDraftConfigAndRestoresKeychain() async throws {
         let config = LLMProviderConfiguration.deepseekDefault(id: "conn-test")
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-old")
@@ -147,10 +147,11 @@ final class SettingsTests: XCTestCase {
         }
         XCTAssertEqual(messages[0], ["role": "user", "content": "ping"])
 
-        XCTAssertEqual(await keychain.load(key: config.apiKeyAccount), "sk-old")
+        let restoredKey = await keychain.load(key: config.apiKeyAccount)
+        XCTAssertEqual(restoredKey, "sk-old")
     }
 
-    func testConnectionFailureShowsLocalizedErrorAndRestoresKeychain() async {
+    func testConnectionFailureShowsLocalizedErrorAndRestoresKeychain() async throws {
         let config = LLMProviderConfiguration.deepseekDefault(id: "conn-test")
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-old")
@@ -173,10 +174,11 @@ final class SettingsTests: XCTestCase {
         )
 
         XCTAssertEqual(result, .failure(L("settings.ai.test.failure")))
-        XCTAssertEqual(await keychain.load(key: config.apiKeyAccount), "sk-old")
+        let restoredKey = await keychain.load(key: config.apiKeyAccount)
+        XCTAssertEqual(restoredKey, "sk-old")
     }
 
-    func testConnectionWithoutPreviousKeyDeletesDraftKey() async {
+    func testConnectionWithoutPreviousKeyDeletesDraftKey() async throws {
         let config = LLMProviderConfiguration.deepseekDefault(id: "conn-test")
         let keychain = MockKeychain()
 
@@ -199,7 +201,8 @@ final class SettingsTests: XCTestCase {
         )
 
         XCTAssertEqual(result, .success(L("settings.ai.test.success")))
-        XCTAssertNil(await keychain.load(key: config.apiKeyAccount))
+        let remainingKey = await keychain.load(key: config.apiKeyAccount)
+        XCTAssertNil(remainingKey)
     }
 
     // MARK: - Helpers
