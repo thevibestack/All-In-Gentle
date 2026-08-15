@@ -205,6 +205,42 @@ final class SettingsTests: XCTestCase {
         XCTAssertNil(remainingKey)
     }
 
+    func testMigrationNoDanglingConfigWhenKeySaveFails() async throws {
+        let defaults = makeEphemeralDefaults()
+        let store = PreferencesStore(defaults: defaults)
+        let keychain = MockKeychain()
+        try await keychain.save(key: ProviderConfigurationMigrator.legacyDeepSeekAccount, value: "sk-legacy")
+        await keychain.setFailNextSave()
+
+        let migrator = ProviderConfigurationMigrator(
+            preferences: store,
+            keychain: keychain
+        )
+        await migrator.migrateIfNeeded()
+
+        XCTAssertNil(store.llmProviderConfiguration, "Config must stay nil when the key copy fails")
+
+        let legacyKeyStillPresent = try await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
+        XCTAssertEqual(legacyKeyStillPresent, "sk-legacy")
+        let migratedKey = try await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        XCTAssertNil(migratedKey)
+    }
+
+    func testMigrationSkipsWhenKeychainLoadThrows() async {
+        let defaults = makeEphemeralDefaults()
+        let store = PreferencesStore(defaults: defaults)
+        let keychain = MockKeychain()
+        await keychain.setFailNextLoad()
+
+        let migrator = ProviderConfigurationMigrator(
+            preferences: store,
+            keychain: keychain
+        )
+        await migrator.migrateIfNeeded()
+
+        XCTAssertNil(store.llmProviderConfiguration)
+    }
+
     // MARK: - Helpers
 
     private func makeEphemeralDefaults() -> UserDefaults {
