@@ -6,15 +6,17 @@ import XCTest
 actor CapturingProcessRunner: ProcessRunning {
     var lastExecutable: URL?
     var lastArguments: [String] = []
+    var lastTimeout: Duration?
     var nextOutput: String = ""
 
     func setNextOutput(_ value: String) {
         nextOutput = value
     }
 
-    func run(executable: URL, arguments: [String]) async throws -> String {
+    func run(executable: URL, arguments: [String], timeout: Duration = .seconds(30)) async throws -> String {
         lastExecutable = executable
         lastArguments = arguments
+        lastTimeout = timeout
         return nextOutput
     }
 }
