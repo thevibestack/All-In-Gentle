@@ -12,8 +12,11 @@ struct StubProjectSourceProvider: ProjectSourceProvider {
 
 final class StubEngramSearchProvider: EngramSearchProvider, @unchecked Sendable {
     var results: [MemoryObservation] = []
+    var observationsResults: [MemoryObservation] = []
     var lastQuery: String?
     var lastProject: String?
+    var lastObservationsProject: String?
+    var lastObservationsLimit: Int?
 
     func search(query: String, limit: Int) async throws -> [MemoryObservation] {
         lastQuery = query
@@ -24,6 +27,12 @@ final class StubEngramSearchProvider: EngramSearchProvider, @unchecked Sendable 
         lastQuery = query
         lastProject = project
         return results
+    }
+
+    func observations(project: String, limit: Int) async throws -> [MemoryObservation] {
+        lastObservationsProject = project
+        lastObservationsLimit = limit
+        return observationsResults
     }
 }
 
