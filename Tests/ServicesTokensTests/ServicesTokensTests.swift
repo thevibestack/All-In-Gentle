@@ -44,7 +44,7 @@ final class ServicesTokensTests: XCTestCase {
 }
 
 struct PermissionDeniedRunner: ProcessRunning {
-    func run(executable: URL, arguments: [String]) async throws -> String {
+    func run(executable: URL, arguments: [String], timeout: Duration = .seconds(30)) async throws -> String {
         throw AllInGentleError.sourceUnavailable("Operation not permitted")
     }
 }
