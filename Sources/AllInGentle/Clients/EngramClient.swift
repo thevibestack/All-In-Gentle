@@ -1,16 +1,24 @@
 import Foundation
+import os
 
 public actor EngramClient {
     public let baseURL: URL
     private let urlSession: URLSession
 
-    private static let engramDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }()
+    /// Lossy wrapper: a malformed item decodes to `nil` instead of failing the whole array.
+    private struct Failable<T: Decodable>: Decodable {
+        let value: T?
+
+        init(from decoder: Decoder) throws {
+            do {
+                value = try T(from: decoder)
+            } catch {
+                Logger(subsystem: "AllInGentleKit", category: "EngramClient")
+                    .error("Skipping malformed Engram observation: \(String(describing: error))")
+                value = nil
+            }
+        }
+    }
 
     public init(
         baseURL: URL = URL(string: "http://127.0.0.1:7437")!,
@@ -75,33 +83,7 @@ public actor EngramClient {
     }
 
     private func parseObservations(_ data: Data) throws -> [MemoryObservation] {
-        let raw = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
-        return raw.compactMap { item in
-            let id = (item["sync_id"] as? String) ?? (item["id"].map { String(describing: $0) } ?? UUID().uuidString)
-            guard let title = item["title"] as? String,
-                  let content = item["content"] as? String else {
-                return nil
-            }
-            let project = item["project"] as? String
-            let tags = (item["tags"] as? [String]) ?? []
-            let createdAt: Date
-            if let dateString = item["created_at"] as? String,
-               let date = Self.engramDateFormatter.date(from: dateString) {
-                createdAt = date
-            } else if let dateString = item["updated_at"] as? String,
-                      let date = Self.engramDateFormatter.date(from: dateString) {
-                createdAt = date
-            } else {
-                createdAt = Date()
-            }
-            return MemoryObservation(
-                id: id,
-                title: title,
-                content: content,
-                project: project,
-                tags: tags,
-                createdAt: createdAt
-            )
-        }
+        let items = try JSONDecoder().decode([Failable<EngramObservation>]?.self, from: data) ?? []
+        return items.compactMap(\.value).map(\.memoryObservation)
     }
 }
