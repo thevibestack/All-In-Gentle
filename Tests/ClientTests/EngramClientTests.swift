@@ -4,11 +4,13 @@ import XCTest
 
 private final class MockURLProtocol: URLProtocol {
     nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var requestCount = 0
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        Self.requestCount += 1
         guard let handler = Self.requestHandler else {
             client?.urlProtocolDidFinishLoading(self)
             return
@@ -36,8 +38,13 @@ final class EngramClientTests: XCTestCase {
         return URLSession(configuration: configuration)
     }
 
-    private func stubJSON(_ body: String, status: Int = 200) {
+    private func stubJSON(
+        _ body: String,
+        status: Int = 200,
+        onRequest: ((URLRequest) -> Void)? = nil
+    ) {
         MockURLProtocol.requestHandler = { request in
+            onRequest?(request)
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: status,
@@ -178,5 +185,126 @@ final class EngramClientTests: XCTestCase {
         let result = try await makeClient().search(query: "hello", limit: 20)
 
         XCTAssertEqual(result.count, 0, "Empty array must decode to an empty array")
+    }
+
+    // MARK: - T5: 2-arg search sends q+limit only; 3-arg adds project (R5)
+
+    func testSearchTwoArgSendsOnlyQueryAndLimit() async throws {
+        var captured: URLRequest?
+        stubJSON("[]") { captured = $0 }
+
+        _ = try await makeClient().search(query: "hello world", limit: 20)
+
+        let request = try XCTUnwrap(captured, "2-arg search must issue a request")
+        let components = try XCTUnwrap(URLComponents(url: request.url!, resolvingAgainstBaseURL: true))
+        XCTAssertEqual(components.path, "/search")
+        let items = components.queryItems ?? []
+        XCTAssertEqual(items.count, 2, "2-arg search must send exactly q and limit")
+        XCTAssertEqual(items.first { $0.name == "q" }?.value, "hello world")
+        XCTAssertEqual(items.first { $0.name == "limit" }?.value, "20")
+        XCTAssertNil(items.first { $0.name == "project" }, "2-arg search must not send project")
+    }
+
+    func testSearchThreeArgSendsProjectAsLastPathComponent() async throws {
+        var captured: URLRequest?
+        stubJSON("[]") { captured = $0 }
+
+        _ = try await makeClient().search(
+            query: "note",
+            limit: 50,
+            project: "/Users/jesuslizarragapena/TRAZO-SOFTWARE/All-In-Gentle"
+        )
+
+        let request = try XCTUnwrap(captured)
+        let components = try XCTUnwrap(URLComponents(url: request.url!, resolvingAgainstBaseURL: true))
+        XCTAssertEqual(components.path, "/search")
+        let items = components.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "q" }?.value, "note")
+        XCTAssertEqual(
+            items.first { $0.name == "project" }?.value,
+            "All-In-Gentle",
+            "R5: project must be the last path component, not the full path"
+        )
+        XCTAssertEqual(items.first { $0.name == "limit" }?.value, "50")
+    }
+
+    // MARK: - T6: observations(project:) and projects() request shapes (R5/R6)
+
+    func testObservationsSendsProjectLastPathComponentAndLimit() async throws {
+        var captured: URLRequest?
+        stubJSON("[]") { captured = $0 }
+
+        _ = try await makeClient().observations(project: "/path/all-in-gentle")
+
+        let request = try XCTUnwrap(captured)
+        let components = try XCTUnwrap(URLComponents(url: request.url!, resolvingAgainstBaseURL: true))
+        XCTAssertEqual(components.path, "/observations")
+        let items = components.queryItems ?? []
+        XCTAssertEqual(
+            items.first { $0.name == "project" }?.value,
+            "all-in-gentle",
+            "R5: observations must send project=<lastPathComponent>"
+        )
+        XCTAssertEqual(items.first { $0.name == "limit" }?.value, "20")
+        XCTAssertNil(items.first { $0.name == "q" }, "observations must never send q")
+    }
+
+    func testObservationsWithExplicitLimitAndDifferentProject() async throws {
+        var captured: URLRequest?
+        stubJSON("[]") { captured = $0 }
+
+        _ = try await makeClient().observations(project: "/Users/me/Repo-Space", limit: 200)
+
+        let request = try XCTUnwrap(captured)
+        let components = try XCTUnwrap(URLComponents(url: request.url!, resolvingAgainstBaseURL: true))
+        XCTAssertEqual(components.path, "/observations")
+        let items = components.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "project" }?.value, "Repo-Space")
+        XCTAssertEqual(items.first { $0.name == "limit" }?.value, "200", "explicit limit must be forwarded")
+        XCTAssertNil(items.first { $0.name == "q" })
+    }
+
+    func testProjectsRequestsObservationsWithLimitThousandAndNoQuery() async throws {
+        var captured: URLRequest?
+        stubJSON("""
+        [
+          { "id": 1, "title": "A", "content": "C", "project": "alpha" },
+          { "id": 2, "title": "B", "content": "C", "project": "beta" },
+          { "id": 3, "title": "C", "content": "C", "project": "alpha" }
+        ]
+        """) { captured = $0 }
+
+        let projects = try await makeClient().projects()
+
+        let request = try XCTUnwrap(captured)
+        let components = try XCTUnwrap(URLComponents(url: request.url!, resolvingAgainstBaseURL: true))
+        XCTAssertEqual(components.path, "/observations")
+        let items = components.queryItems ?? []
+        XCTAssertEqual(items.count, 1, "projects() must send only limit")
+        XCTAssertEqual(items.first { $0.name == "limit" }?.value, "1000")
+        XCTAssertNil(items.first { $0.name == "q" }, "R6: projects() must never send q")
+        XCTAssertNil(items.first { $0.name == "project" })
+        XCTAssertEqual(projects.map(\.name), ["alpha", "beta"], "R6: non-empty deduplicated project list")
+    }
+
+    // MARK: - T7: empty-q 3-arg search throws before any request (D9)
+
+    func testSearchThreeArgEmptyQueryThrowsBeforeAnyRequest() async throws {
+        MockURLProtocol.requestCount = 0
+        stubJSON("[]")
+
+        let client = makeClient()
+        do {
+            _ = try await client.search(query: "", limit: 20, project: "/path/all-in-gentle")
+            XCTFail("Empty q with a project must throw invalidConfiguration")
+        } catch let error as AllInGentleError {
+            XCTAssertEqual(error, .invalidConfiguration("Engram search requires non-empty q"))
+        }
+
+        XCTAssertEqual(
+            MockURLProtocol.requestCount,
+            0,
+            "D9: no request may be made for an empty q"
+        )
     }
 }
