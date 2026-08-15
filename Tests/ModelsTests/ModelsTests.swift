@@ -88,5 +88,90 @@ final class ModelsTests: XCTestCase {
         assertSendable(AllInGentleError.sourceUnavailable("test"))
     }
 
+    // MARK: - AllInGentleError localization (F3)
+
+    func testReadOnlyViolationLocalizedDescriptionMatchesCatalog() {
+        XCTAssertEqual(
+            AllInGentleError.readOnlyViolation.localizedDescription,
+            L("errors.readOnlyViolation")
+        )
+    }
+
+    func testSourceUnavailableLocalizedDescriptionMatchesCatalog() {
+        XCTAssertEqual(
+            AllInGentleError.sourceUnavailable("detail").localizedDescription,
+            L("errors.sourceUnavailable", "detail")
+        )
+    }
+
+    func testInvalidConfigurationLocalizedDescriptionMatchesCatalog() {
+        XCTAssertEqual(
+            AllInGentleError.invalidConfiguration("detail").localizedDescription,
+            L("errors.invalidConfiguration", "detail")
+        )
+    }
+
+    func testPersistenceFailureLocalizedDescriptionMatchesCatalog() {
+        XCTAssertEqual(
+            AllInGentleError.persistenceFailure("detail").localizedDescription,
+            L("errors.persistenceFailure", "detail")
+        )
+    }
+
+    func testErrorPayloadDetailSurvivesInterpolation() {
+        let message = AllInGentleError.sourceUnavailable("Engram search failed").localizedDescription
+        XCTAssertTrue(
+            message.contains("Engram search failed"),
+            "Payload detail must survive interpolation, got: \(message)"
+        )
+    }
+
+    func testErrorDescriptionsAreNonEmpty() {
+        XCTAssertFalse(AllInGentleError.sourceUnavailable("").localizedDescription.isEmpty)
+        XCTAssertFalse(AllInGentleError.readOnlyViolation.localizedDescription.isEmpty)
+    }
+
+    func testErrorCatalogKeysPresentInBothLanguages() throws {
+        let bundle = try XCTUnwrap(allInGentleKitBundle(), "AllInGentleKit resource bundle not found")
+        let en = try XCTUnwrap(catalog(for: "en", in: bundle), "en.lproj catalog not found")
+        let es = try XCTUnwrap(catalog(for: "es", in: bundle), "es.lproj catalog not found")
+
+        XCTAssertEqual(en["errors.readOnlyViolation"], "This action is read-only and cannot be performed.")
+        XCTAssertEqual(en["errors.sourceUnavailable"], "A data source is unavailable: %@")
+        XCTAssertEqual(en["errors.invalidConfiguration"], "Invalid configuration: %@")
+        XCTAssertEqual(en["errors.persistenceFailure"], "Could not save your data: %@")
+
+        XCTAssertEqual(es["errors.readOnlyViolation"], "Esta acción es de solo lectura y no se puede realizar.")
+        XCTAssertEqual(es["errors.sourceUnavailable"], "Una fuente de datos no está disponible: %@")
+        XCTAssertEqual(es["errors.invalidConfiguration"], "Configuración inválida: %@")
+        XCTAssertEqual(es["errors.persistenceFailure"], "No se pudieron guardar tus datos: %@")
+    }
+
+    func testErrorCatalogKeySetsAreIdenticalAcrossLanguages() throws {
+        let bundle = try XCTUnwrap(allInGentleKitBundle(), "AllInGentleKit resource bundle not found")
+        let en = try XCTUnwrap(catalog(for: "en", in: bundle), "en.lproj catalog not found")
+        let es = try XCTUnwrap(catalog(for: "es", in: bundle), "es.lproj catalog not found")
+
+        XCTAssertEqual(Set(en.keys), Set(es.keys))
+        XCTAssertEqual(en.count, 157)
+        XCTAssertEqual(es.count, 157)
+    }
+
+    // MARK: - Helpers (F3)
+
+    private func allInGentleKitBundle() -> Bundle? {
+        var candidates: [Bundle] = [Bundle.module]
+        candidates.append(contentsOf: Bundle.allBundles)
+        return candidates.first(where: {
+            $0.url(forResource: "Localizable", withExtension: "strings", subdirectory: "en.lproj") != nil
+        })
+    }
+
+    private func catalog(for language: String, in bundle: Bundle) -> [String: String]? {
+        guard let url = bundle.url(forResource: "Localizable", withExtension: "strings", subdirectory: "\(language).lproj")
+        else { return nil }
+        return NSDictionary(contentsOf: url) as? [String: String]
+    }
+
     private func assertSendable<T: Sendable>(_ value: T) {}
 }
