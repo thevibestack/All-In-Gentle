@@ -146,6 +146,7 @@
 "settings.ai.error.invalidURL" = "Enter a valid HTTP or HTTPS URL.";
 "settings.ai.error.displayNameRequired" = "Display name is required.";
 "settings.ai.error.modelRequired" = "Model name is required.";
+"settings.ai.error.keychainLoadFailed" = "Unable to read the API key from the keychain.";
 "projectDetail.empty.title" = "No project selected";
 "projectDetail.empty.message" = "Choose a project from the sidebar to view details.";
 "projectDetail.memories.title" = "Memories";

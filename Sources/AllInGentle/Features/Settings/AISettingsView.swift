@@ -192,6 +192,31 @@ public struct AISettingsView: View {
         )
     }
 
+    // MARK: - Keychain load diagnostics
+
+    /// Maps a keychain `load` outcome to the validation message shown under
+    /// the form (spec R5).
+    ///
+    /// A missing item is not an error: `load` returns `nil` and the API key
+    /// field stays empty — the normal "no key yet" state — so no message is
+    /// produced. Thrown errors surface a localized diagnostic: the keychain
+    /// store wraps every non-not-found failure (including auth/interaction
+    /// failures) in ``AllInGentleError/persistenceFailure(_:)``, whose
+    /// associated message carries the real diagnostic; any other error falls
+    /// back to a generic message.
+    static func keychainLoadDiagnostic(for outcome: Result<String?, any Error>) -> String? {
+        switch outcome {
+        case .success:
+            return nil
+        case .failure(let error):
+            guard let keychainError = error as? AllInGentleError,
+                  case .persistenceFailure(let message) = keychainError else {
+                return L("settings.ai.error.keychainLoadFailed")
+            }
+            return message
+        }
+    }
+
     // MARK: - Actions
 
     private func addProvider() {
@@ -206,7 +231,7 @@ public struct AISettingsView: View {
                 apiKey = key
             }
         } catch {
-            validationMessage = error.localizedDescription
+            validationMessage = Self.keychainLoadDiagnostic(for: .failure(error))
         }
     }
 
