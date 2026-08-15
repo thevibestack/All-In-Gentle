@@ -149,5 +149,6 @@
 "projectDetail.empty.message" = "Elegí un proyecto de la barra lateral para ver los detalles.";
 "projectDetail.memories.title" = "Memorias";
 "projectDetail.memories.empty" = "No se encontraron memorias para este proyecto.";
+"projectDetail.memories.fallback" = "Mostrando resultados de una búsqueda más amplia";
 "projectDetail.documents.title" = "Documentos";
 "projectDetail.documents.empty" = "No se encontraron documentos OpenSpec para este proyecto.";
