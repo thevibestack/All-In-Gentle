@@ -161,7 +161,7 @@ struct ChatView: View {
                     systemImage: "exclamationmark.triangle",
                     message: errorMessage,
                     retry: {
-                        Task { await viewModel.send() }
+                        Task { await viewModel.retryLastSend() }
                     }
                 )
                 .frame(height: 120)
