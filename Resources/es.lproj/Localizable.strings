@@ -141,6 +141,7 @@
 "settings.ai.testConnection" = "Probar conexión";
 "settings.ai.save.success" = "Proveedor guardado correctamente.";
 "settings.ai.test.success" = "La configuración parece válida.";
+"settings.ai.test.failure" = "La prueba de conexión falló.";
 "settings.ai.error.apiKeyRequired" = "La clave de API es obligatoria.";
 "settings.ai.error.invalidURL" = "Ingresá una URL HTTP o HTTPS válida.";
 "settings.ai.error.displayNameRequired" = "El nombre visible es obligatorio.";

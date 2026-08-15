@@ -7,6 +7,7 @@ import SwiftUI
 public struct AISettingsView: View {
     private let store: PreferencesStore
     private let keychain: KeychainStore
+    private let urlSession: URLSession
 
     @State private var draft: LLMProviderConfiguration?
     @State private var apiKey: String = ""
@@ -16,10 +17,12 @@ public struct AISettingsView: View {
 
     public init(
         store: PreferencesStore = PreferencesStore(),
-        keychain: KeychainStore = KeychainStore()
+        keychain: KeychainStore = KeychainStore(),
+        urlSession: URLSession = .shared
     ) {
         self.store = store
         self.keychain = keychain
+        self.urlSession = urlSession
     }
 
     public var body: some View {
@@ -258,13 +261,86 @@ public struct AISettingsView: View {
     }
 
     private func testConnection() async {
-        guard validate() else { return }
+        guard !isTesting, validate(), let draft else { return }
 
         isTesting = true
         defer { isTesting = false }
 
-        // v1 performs local validation only. A future iteration can make an
-        // authenticated request to the provider's health/models endpoint.
-        testResult = L("settings.ai.test.success")
+        let result = await Self.performConnectionTest(
+            configuration: draft,
+            apiKey: apiKey,
+            keychain: keychain,
+            urlSession: urlSession
+        )
+
+        switch result {
+        case .success(let message):
+            testResult = message
+        case .failure(let message):
+            testResult = nil
+            validationMessage = message
+        }
+    }
+}
+
+/// Outcome of a provider connection test, carrying the localized message to render.
+enum AIConnectionTestResult: Equatable, Sendable {
+    case success(String)
+    case failure(String)
+}
+
+extension AISettingsView {
+    /// Performs a real authenticated request against the draft configuration.
+    ///
+    /// Persists the draft API key under the provider's Keychain account for the
+    /// duration of the call, streams a single capped "ping" through
+    /// ``DeepSeekProvider``, then restores the previous Keychain state before
+    /// returning — cancel-without-save never leaves the draft key behind.
+    static func performConnectionTest(
+        configuration: LLMProviderConfiguration,
+        apiKey: String,
+        keychain: any KeychainStoring,
+        urlSession: URLSession
+    ) async -> AIConnectionTestResult {
+        let account = LLMProviderConfiguration.keychainAccount(for: configuration.id)
+        let previousKey = await keychain.load(key: account)
+
+        do {
+            try await keychain.save(key: account, value: apiKey)
+
+            var testConfiguration = configuration
+            testConfiguration.maxTokens = 1
+            testConfiguration.apiKeyReference = account
+
+            let provider = DeepSeekProvider(
+                configuration: testConfiguration,
+                urlSession: urlSession,
+                keychain: keychain
+            )
+            let stream = try await provider.stream(messages: [
+                ChatMessage(id: UUID().uuidString, role: .user, content: "ping")
+            ])
+            for try await _ in stream {}
+
+            await restoreKeychainState(previousKey: previousKey, account: account, keychain: keychain)
+            return .success(L("settings.ai.test.success"))
+        } catch {
+            await restoreKeychainState(previousKey: previousKey, account: account, keychain: keychain)
+            return .failure(L("settings.ai.test.failure"))
+        }
+    }
+
+    /// Restores the Keychain entry that existed before a connection test:
+    /// re-saves `previousKey` when present, otherwise deletes the draft entry.
+    private static func restoreKeychainState(
+        previousKey: String?,
+        account: String,
+        keychain: any KeychainStoring
+    ) async {
+        if let previousKey {
+            try? await keychain.save(key: account, value: previousKey)
+        } else {
+            await keychain.delete(key: account)
+        }
     }
 }
