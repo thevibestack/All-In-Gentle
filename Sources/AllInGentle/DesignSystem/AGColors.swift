@@ -72,9 +72,13 @@ public enum AGColors {
         }))
     }
 
+    /// Text on accent-colored surfaces. White in light appearance; near-black
+    /// in dark appearance so it keeps WCAG AA (>=4.5:1) against both `accent`
+    /// and `statusError` (white-on-dark-accent measured ~2.9:1).
     public static var accentText: Color {
-        Color(nsColor: NSColor(name: "AGAccentText", dynamicProvider: { _ in
-            NSColor.white
+        Color(nsColor: NSColor(name: "AGAccentText", dynamicProvider: { appearance in
+            appearance.isDark ? NSColor(red: 0.08, green: 0.10, blue: 0.14, alpha: 1.0)
+                              : NSColor.white
         }))
     }
 
