@@ -37,7 +37,7 @@ public final class ProjectDetailViewModel {
 
         do {
             try Task.checkCancellation()
-            let exact = try await engram.search(query: "", limit: 200, project: normalized)
+            let exact = try await engram.observations(project: normalized, limit: 200)
             try Task.checkCancellation()
 
             if !exact.isEmpty {

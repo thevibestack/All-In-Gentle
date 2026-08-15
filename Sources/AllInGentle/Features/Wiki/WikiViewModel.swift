@@ -4,6 +4,7 @@ import Observation
 public protocol EngramSearchProvider: Sendable {
     func search(query: String, limit: Int) async throws -> [MemoryObservation]
     func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation]
+    func observations(project: String, limit: Int) async throws -> [MemoryObservation]
 }
 
 extension EngramSearchProvider {
@@ -13,6 +14,15 @@ extension EngramSearchProvider {
             return results.filter { $0.project == project }
         }
         return results
+    }
+
+    /// Fallback for providers without server-side project filtering: search by the
+    /// project name, then filter client-side. `EngramClient` overrides this with a
+    /// server-side `project=` request (D7, R8).
+    public func observations(project: String, limit: Int) async throws -> [MemoryObservation] {
+        let name = (project as NSString).lastPathComponent
+        let all = try await search(query: name, limit: limit)
+        return all.filter { ($0.project ?? "") == name || $0.project == project }
     }
 }
 
