@@ -22,67 +22,16 @@ struct ProjectDetailView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: AGSpacing.small) {
-                    HStack(spacing: AGSpacing.xSmall) {
-                        Text(L("projectDetail.memories.title"))
-                            .font(AGTypography.headline)
-                            .foregroundStyle(AGColors.textPrimary)
-                        if viewModel.usedFallbackSearch {
-                            Text(L("projectDetail.memories.fallback"))
-                                .font(AGTypography.caption)
-                                .foregroundStyle(AGColors.statusPlaceholder)
-                        }
-                    }
-
-                    if viewModel.memories.isEmpty {
-                        Text(L("projectDetail.memories.empty"))
-                            .font(AGTypography.body)
-                            .foregroundStyle(AGColors.textSecondary)
-                    } else {
-                        LazyVStack(alignment: .leading, spacing: AGSpacing.small) {
-                            ForEach(viewModel.memories) { memory in
-                                AGCard {
-                                    VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
-                                        Text(memory.title)
-                                            .font(AGTypography.headline)
-                                            .foregroundStyle(AGColors.textPrimary)
-                                        Text(memory.content)
-                                            .font(AGTypography.body)
-                                            .foregroundStyle(AGColors.textSecondary)
-                                            .lineLimit(3)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: AGSpacing.small) {
-                    Text(L("projectDetail.documents.title"))
-                        .font(AGTypography.headline)
-                        .foregroundStyle(AGColors.textPrimary)
-
-                    if viewModel.documents.isEmpty {
-                        Text(L("projectDetail.documents.empty"))
-                            .font(AGTypography.body)
-                            .foregroundStyle(AGColors.textSecondary)
-                    } else {
-                        LazyVStack(alignment: .leading, spacing: AGSpacing.small) {
-                            ForEach(viewModel.documents) { document in
-                                AGCard {
-                                    VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
-                                        Text(document.title ?? (document.path as NSString).lastPathComponent)
-                                            .font(AGTypography.headline)
-                                            .foregroundStyle(AGColors.textPrimary)
-                                        Text(document.path)
-                                            .font(AGTypography.caption)
-                                            .foregroundStyle(AGColors.textSecondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if viewModel.isLoading && viewModel.memories.isEmpty {
+                    AGLoadingState(titleKey: "ds.state.loading")
+                } else if let errorMessage = viewModel.errorMessage, viewModel.memories.isEmpty {
+                    AGErrorState(
+                        message: errorMessage,
+                        retry: { viewModel.load(projectPath: project.path) }
+                    )
+                } else {
+                    memoriesSection
+                    documentsSection
                 }
             }
             .padding(AGSpacing.medium)
@@ -90,6 +39,75 @@ struct ProjectDetailView: View {
         }
         .task(id: project.path) {
             viewModel.load(projectPath: project.path)
+        }
+    }
+
+    @ViewBuilder
+    private var memoriesSection: some View {
+        VStack(alignment: .leading, spacing: AGSpacing.small) {
+            HStack(spacing: AGSpacing.xSmall) {
+                Text(L("projectDetail.memories.title"))
+                    .font(AGTypography.headline)
+                    .foregroundStyle(AGColors.textPrimary)
+                if viewModel.usedFallbackSearch {
+                    Text(L("projectDetail.memories.fallback"))
+                        .font(AGTypography.caption)
+                        .foregroundStyle(AGColors.statusPlaceholder)
+                }
+            }
+
+            if viewModel.memories.isEmpty {
+                Text(L("projectDetail.memories.empty"))
+                    .font(AGTypography.body)
+                    .foregroundStyle(AGColors.textSecondary)
+            } else {
+                LazyVStack(alignment: .leading, spacing: AGSpacing.small) {
+                    ForEach(viewModel.memories) { memory in
+                        AGCard {
+                            VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
+                                Text(memory.title)
+                                    .font(AGTypography.headline)
+                                    .foregroundStyle(AGColors.textPrimary)
+                                Text(memory.content)
+                                    .font(AGTypography.body)
+                                    .foregroundStyle(AGColors.textSecondary)
+                                    .lineLimit(3)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var documentsSection: some View {
+        VStack(alignment: .leading, spacing: AGSpacing.small) {
+            Text(L("projectDetail.documents.title"))
+                .font(AGTypography.headline)
+                .foregroundStyle(AGColors.textPrimary)
+
+            if viewModel.documents.isEmpty {
+                Text(L("projectDetail.documents.empty"))
+                    .font(AGTypography.body)
+                    .foregroundStyle(AGColors.textSecondary)
+            } else {
+                LazyVStack(alignment: .leading, spacing: AGSpacing.small) {
+                    ForEach(viewModel.documents) { document in
+                        AGCard {
+                            VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
+                                Text(document.title ?? (document.path as NSString).lastPathComponent)
+                                    .font(AGTypography.headline)
+                                    .foregroundStyle(AGColors.textPrimary)
+                                Text(document.path)
+                                    .font(AGTypography.caption)
+                                    .foregroundStyle(AGColors.textSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
