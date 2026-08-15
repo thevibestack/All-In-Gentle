@@ -152,3 +152,8 @@
 "projectDetail.memories.fallback" = "Mostrando resultados de una búsqueda más amplia";
 "projectDetail.documents.title" = "Documentos";
 "projectDetail.documents.empty" = "No se encontraron documentos OpenSpec para este proyecto.";
+
+"errors.readOnlyViolation" = "Esta acción es de solo lectura y no se puede realizar.";
+"errors.sourceUnavailable" = "Una fuente de datos no está disponible: %@";
+"errors.invalidConfiguration" = "Configuración inválida: %@";
+"errors.persistenceFailure" = "No se pudieron guardar tus datos: %@";

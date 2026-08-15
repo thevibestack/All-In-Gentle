@@ -152,3 +152,8 @@
 "projectDetail.memories.fallback" = "Showing results from a broader search";
 "projectDetail.documents.title" = "Documents";
 "projectDetail.documents.empty" = "No OpenSpec documents found for this project.";
+
+"errors.readOnlyViolation" = "This action is read-only and cannot be performed.";
+"errors.sourceUnavailable" = "A data source is unavailable: %@";
+"errors.invalidConfiguration" = "Invalid configuration: %@";
+"errors.persistenceFailure" = "Could not save your data: %@";
