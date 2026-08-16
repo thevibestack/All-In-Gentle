@@ -3,90 +3,183 @@ import XCTest
 @testable import AllInGentleKit
 
 final class ModelsTests: XCTestCase {
-    func testProjectConformsToSendable() async {
+    // MARK: - Codable round-trips
+
+    func testProjectCodableRoundTrip() throws {
         let project = Project(
             id: "p1",
             name: "Test Project",
             path: "/Users/test/project",
             source: .engram,
-            lastModified: Date()
+            lastModified: wholeSeconds(Date())
         )
-        assertSendable(project)
-        XCTAssertEqual(project.source, .engram)
-        XCTAssertEqual(project.name, "Test Project")
+        let decoded = try decodeRoundTrip(project)
+        var normalized = decoded
+        normalized.lastModified = decoded.lastModified.map(wholeSeconds)
+        XCTAssertEqual(project, normalized)
     }
 
-    func testMemoryObservationConformsToSendable() async {
+    func testProjectCodableRoundTripNilLastModified() throws {
+        let project = Project(
+            id: "p2",
+            name: "Nil Date Project",
+            path: "/Users/test/nil-date",
+            source: .codegraph,
+            lastModified: nil
+        )
+        XCTAssertEqual(try decodeRoundTrip(project), project)
+    }
+
+    func testMemoryObservationCodableRoundTrip() throws {
         let observation = MemoryObservation(
             id: "m1",
             title: "Memory",
             content: "Content",
             project: "p1",
-            tags: ["tag1"]
+            tags: ["tag1", "tag2"],
+            createdAt: wholeSeconds(Date())
         )
-        assertSendable(observation)
-        XCTAssertEqual(observation.tags, ["tag1"])
+        let decoded = try decodeRoundTrip(observation)
+        var normalized = decoded
+        normalized.createdAt = wholeSeconds(decoded.createdAt)
+        XCTAssertEqual(observation, normalized)
     }
 
-    func testServiceStatusConformsToSendable() async {
+    func testServiceStatusCodableRoundTrip() throws {
         let status = ServiceStatus(
             id: "s1",
             name: "engram serve",
             isRunning: true,
             pid: 1234,
             port: 7437,
-            uptime: 3600
+            uptime: 3600.5,
+            lastError: "boom"
         )
-        assertSendable(status)
-        XCTAssertEqual(status.port, 7437)
+        XCTAssertEqual(try decodeRoundTrip(status), status)
     }
 
-    func testTokenUsageConformsToSendable() async {
+    func testServiceStatusCodableRoundTripNilOptionals() throws {
+        let status = ServiceStatus(
+            id: "s2",
+            name: "codegraph",
+            isRunning: false
+        )
+        XCTAssertEqual(try decodeRoundTrip(status), status)
+    }
+
+    func testTokenUsageCodableRoundTrip() throws {
         let usage = TokenUsage(
             id: "t1",
             project: "p1",
             session: "sess1",
             promptTokens: 100,
             completionTokens: 50,
-            estimatedCost: 0.012
+            estimatedCost: 0.012,
+            timestamp: wholeSeconds(Date()),
+            rawTimeUpdated: 1_800_000.25
         )
-        assertSendable(usage)
-        XCTAssertEqual(usage.totalTokens, 150)
+        let decoded = try decodeRoundTrip(usage)
+        var normalized = decoded
+        normalized.timestamp = wholeSeconds(decoded.timestamp)
+        XCTAssertEqual(usage, normalized)
     }
 
-    func testSessionSummaryConformsToSendable() async {
+    func testSessionSummaryCodableRoundTrip() throws {
         let summary = SessionSummary(
             id: "ss1",
             project: "p1",
             sessionName: "Session A",
             messageCount: 10,
             totalTokens: 1000,
-            estimatedCost: 0.05
+            estimatedCost: 0.05,
+            latestDate: wholeSeconds(Date())
         )
-        assertSendable(summary)
-        XCTAssertEqual(summary.messageCount, 10)
+        let decoded = try decodeRoundTrip(summary)
+        var normalized = decoded
+        normalized.latestDate = wholeSeconds(decoded.latestDate)
+        XCTAssertEqual(summary, normalized)
     }
 
-    func testChatMessageConformsToSendable() async {
+    func testChatMessageCodableRoundTrip() throws {
         let message = ChatMessage(
             id: "c1",
             role: .user,
-            content: "Hello"
+            content: "Hello",
+            timestamp: wholeSeconds(Date())
         )
-        assertSendable(message)
-        XCTAssertEqual(message.role, .user)
+        let decoded = try decodeRoundTrip(message)
+        var normalized = decoded
+        normalized.timestamp = wholeSeconds(decoded.timestamp)
+        XCTAssertEqual(message, normalized)
     }
 
-    func testInteractionStateIsSendable() async {
+    // MARK: - Computed properties
+
+    func testTokenUsageTotalTokensComputed() {
+        let usage = TokenUsage(
+            id: "t1",
+            project: "p1",
+            promptTokens: 100,
+            completionTokens: 50,
+            estimatedCost: 0.0
+        )
+        XCTAssertEqual(usage.totalTokens, 150)
+    }
+
+    func testTokenUsageTotalTokensZero() {
+        let usage = TokenUsage(
+            id: "t2",
+            project: "p2",
+            promptTokens: 0,
+            completionTokens: 0,
+            estimatedCost: 0.0
+        )
+        XCTAssertEqual(usage.totalTokens, 0)
+    }
+
+    // MARK: - InteractionState catalog keys
+
+    func testInteractionStateCatalogKeyMapping() {
+        let expectations: [(InteractionState, String)] = [
+            (.live, "badge.live"),
+            (.placeholder, "badge.placeholder"),
+            (.disabled, "badge.disabled"),
+        ]
+        for (state, key) in expectations {
+            XCTAssertEqual(state.catalogKey, key)
+        }
+    }
+
+    func testInteractionStateCatalogKeysUnique() {
+        let keys = InteractionState.allCases.map(\.catalogKey)
+        XCTAssertEqual(Set(keys).count, 3)
+    }
+
+    // MARK: - AllInGentleError Equatable
+
+    func testAllInGentleErrorEquatableEqual() {
+        XCTAssertEqual(AllInGentleError.sourceUnavailable("a"), .sourceUnavailable("a"))
+    }
+
+    func testAllInGentleErrorEquatableNotEqual() {
+        XCTAssertNotEqual(AllInGentleError.sourceUnavailable("a"), .sourceUnavailable("b"))
+        XCTAssertNotEqual(AllInGentleError.readOnlyViolation, .sourceUnavailable("a"))
+    }
+
+    // MARK: - Sendable compile-time gate
+
+    func testAllModelsConformToSendable() {
+        assertSendable(Project(id: "p1", name: "N", path: "/p", source: .engram, lastModified: wholeSeconds(Date())))
+        assertSendable(MemoryObservation(id: "m1", title: "T", content: "C", createdAt: wholeSeconds(Date())))
+        assertSendable(ServiceStatus(id: "s1", name: "svc", isRunning: true))
+        assertSendable(TokenUsage(id: "t1", project: "p1", promptTokens: 1, completionTokens: 2, estimatedCost: 0.0))
+        assertSendable(SessionSummary(id: "ss1", project: "p1", sessionName: "S", messageCount: 1, totalTokens: 2, estimatedCost: 0.0))
+        assertSendable(ChatMessage(id: "c1", role: .user, content: "hi"))
         assertSendable(InteractionState.live)
-        assertSendable(InteractionState.placeholder)
-        assertSendable(InteractionState.disabled)
+        assertSendable(AllInGentleError.sourceUnavailable("gate"))
     }
 
-    func testErrorsAreSendable() async {
-        assertSendable(AllInGentleError.readOnlyViolation)
-        assertSendable(AllInGentleError.sourceUnavailable("test"))
-    }
+    // MARK: - Helpers
 
     // MARK: - AllInGentleError localization (F3)
 
@@ -174,4 +267,12 @@ final class ModelsTests: XCTestCase {
     }
 
     private func assertSendable<T: Sendable>(_ value: T) {}
+
+    private func wholeSeconds(_ date: Date) -> Date {
+        Date(timeIntervalSinceReferenceDate: floor(date.timeIntervalSinceReferenceDate))
+    }
+
+    private func decodeRoundTrip<T: Codable>(_ value: T) throws -> T {
+        try JSONDecoder().decode(T.self, from: JSONEncoder().encode(value))
+    }
 }
