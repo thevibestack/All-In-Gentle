@@ -18,7 +18,7 @@ public struct AISettingsView: View {
     public init(
         store: PreferencesStore = PreferencesStore(),
         keychain: KeychainStore = KeychainStore(),
-        urlSession: URLSession = .shared
+        urlSession: URLSession = URLSession(configuration: .makeAppDefault())
     ) {
         self.store = store
         self.keychain = keychain
