@@ -68,12 +68,15 @@
 "chat.toolbar.rename.message" = "Ingresá un nuevo nombre para este chat.";
 "chat.toolbar.duplicate" = "Duplicar";
 "chat.toolbar.clear" = "Borrar mensajes";
+"chat.toolbar.menu" = "Menú de sesión";
 "chat.toolbar.delete" = "Eliminar";
 "chat.toolbar.delete.cancel" = "Cancelar";
 "chat.toolbar.delete.confirmationTitle" = "¿Eliminar chat?";
 "chat.toolbar.delete.confirmationMessage" = "Esta acción no se puede deshacer.";
+"chat.toolbar.send" = "Enviar";
 "chat.toolbar.status.ready" = "Listo";
 "chat.toolbar.status.disabled" = "Sin proveedor";
+"chat.toolbar.stop" = "Detener";
 "chat.state.streaming" = "Pensando…";
 "chat.input.placeholder" = "Mensaje";
 "chat.project.badge" = "Vinculado a proyecto";

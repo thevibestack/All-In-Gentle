@@ -135,6 +135,26 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertTrue(focused)
     }
 
+    // MARK: - Chat toolbar catalog keys
+
+    func testChatToolbarMenuKeyResolves() {
+        let value = L("chat.toolbar.menu")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.menu")
+    }
+
+    func testChatToolbarStopKeyResolves() {
+        let value = L("chat.toolbar.stop")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.stop")
+    }
+
+    func testChatToolbarSendKeyResolves() {
+        let value = L("chat.toolbar.send")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.send")
+    }
+
     // MARK: - Labeled value
 
     func testAGLabeledValueHoldsLabelAndValue() {
