@@ -111,6 +111,49 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(oldest.rawTimeUpdated, 1_700_000_000_000.0)
     }
 
+    func testTokenUsageKeysetTieBreakFromTempDB() async throws {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("db")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        var writableDB: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(tempURL.path, &writableDB), SQLITE_OK)
+        // Three rows sharing one time_updated: ordering must fall back to the
+        // `time_updated = ? AND id < ?` tie-break (OpenCodeClient.swift).
+        let sql = """
+            CREATE TABLE session (id TEXT PRIMARY KEY, project_id TEXT, title TEXT, cost REAL,
+                                  tokens_input INTEGER, tokens_output INTEGER, time_updated INTEGER);
+            INSERT INTO session VALUES ('s1','p','first',0.1,10,10,1700000000000);
+            INSERT INTO session VALUES ('s2','p','second',0.2,20,20,1700000000000);
+            INSERT INTO session VALUES ('s3','p','third',0.3,30,30,1700000000000);
+            """
+        XCTAssertEqual(sqlite3_exec(writableDB, sql, nil, nil, nil), SQLITE_OK)
+        // Close the writer BEFORE the read-only client opens the file (SQLite locking).
+        sqlite3_close(writableDB)
+
+        let client = OpenCodeClient(dbPath: tempURL.path)
+
+        let page1 = try await client.tokenUsagePage(limit: 1)
+        XCTAssertEqual(page1.map(\.id), ["s3"], "Newest id wins the full tie at time_updated DESC, id DESC")
+
+        let cursor1 = TokenCursor(timeUpdated: page1[0].rawTimeUpdated!, id: page1[0].id)
+        let page2 = try await client.tokenUsagePage(after: cursor1, limit: 1)
+        XCTAssertEqual(
+            page2.map(\.id), ["s2"],
+            "Tie-break branch (time_updated = ? AND id < ?) must continue onto the same timestamp"
+        )
+        XCTAssertEqual(page2[0].rawTimeUpdated, cursor1.timeUpdated, "Cursor continuity: same time_updated, id advances")
+
+        let cursor2 = TokenCursor(timeUpdated: page2[0].rawTimeUpdated!, id: page2[0].id)
+        let page3 = try await client.tokenUsagePage(after: cursor2, limit: 1)
+        XCTAssertEqual(page3.map(\.id), ["s1"])
+
+        let cursor3 = TokenCursor(timeUpdated: page3[0].rawTimeUpdated!, id: page3[0].id)
+        let page4 = try await client.tokenUsagePage(after: cursor3, limit: 1)
+        XCTAssertTrue(page4.isEmpty, "Final page after the last id must be empty")
+    }
+
     // MARK: - Engram hermetic tests
 
     func testEngramHealthParses200() async throws {

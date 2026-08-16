@@ -18,27 +18,6 @@ final class ServicesTokensTests: XCTestCase {
             XCTAssertNotNil(status.lastError)
         }
     }
-
-    func testTokenCursorKeysetCondition() {
-        let sql = Self.tokenUsagePageSQL()
-
-        XCTAssertTrue(sql.contains("time_updated < ?"))
-        XCTAssertTrue(sql.contains("id < ?"))
-        XCTAssertTrue(sql.contains("ORDER BY time_updated DESC, id DESC"))
-        XCTAssertTrue(sql.contains("LIMIT ?"))
-    }
-
-    // MARK: - Helpers
-
-    private static func tokenUsagePageSQL() -> String {
-        """
-        SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
-        FROM session
-        WHERE (time_updated < ? OR (time_updated = ? AND id < ?))
-        ORDER BY time_updated DESC, id DESC
-        LIMIT ?
-        """
-    }
 }
 
 struct PermissionDeniedRunner: ProcessRunning {
