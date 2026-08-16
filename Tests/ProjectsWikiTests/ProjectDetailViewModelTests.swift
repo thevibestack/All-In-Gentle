@@ -22,7 +22,10 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
         viewModel.load(projectPath: projectPath)
-        try? await Task.sleep(for: .milliseconds(100))
+        let loaded = await waitUntil {
+            viewModel.memories.count == 1 && viewModel.documents.count == 1
+        }
+        XCTAssertTrue(loaded, "exact match must fill memories and documents")
 
         XCTAssertEqual(viewModel.memories.count, 1)
         XCTAssertEqual(viewModel.memories.first?.title, "Memory")
@@ -57,7 +60,10 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
         viewModel.load(projectPath: projectPath)
-        try? await Task.sleep(for: .milliseconds(100))
+        let loaded = await waitUntil {
+            viewModel.memories.count == 1
+        }
+        XCTAssertTrue(loaded, "fallback must fill memories")
 
         XCTAssertEqual(viewModel.memories.count, 1)
         XCTAssertTrue(viewModel.usedFallbackSearch)
@@ -83,7 +89,10 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let viewModel = ProjectDetailViewModel(engram: SearchOnlyProvider(), scanner: scanner)
 
         viewModel.load(projectPath: "/projects/alpha")
-        try? await Task.sleep(for: .milliseconds(100))
+        let loaded = await waitUntil {
+            viewModel.memories.count == 1
+        }
+        XCTAssertTrue(loaded, "client-side filter must fill memories")
 
         XCTAssertEqual(viewModel.memories.map(\.id), ["a"])
         XCTAssertFalse(
@@ -101,7 +110,11 @@ final class ProjectDetailViewModelTests: XCTestCase {
         viewModel.load(projectPath: "/projectA")
         try? await Task.sleep(for: .milliseconds(50))
         viewModel.load(projectPath: "/projectB")
-        try? await Task.sleep(for: .milliseconds(700))
+
+        let finished = await waitUntil {
+            !viewModel.isLoading
+        }
+        XCTAssertTrue(finished, "second load must finish and cancel the first")
 
         XCTAssertTrue(viewModel.memories.isEmpty)
     }
@@ -112,7 +125,10 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
         viewModel.load(projectPath: "/tmp/project")
-        try? await Task.sleep(for: .milliseconds(100))
+        let errored = await waitUntil {
+            viewModel.errorMessage != nil
+        }
+        XCTAssertTrue(errored, "load failure must surface an error message")
 
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertTrue(viewModel.memories.isEmpty)
