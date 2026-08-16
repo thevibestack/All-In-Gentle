@@ -37,7 +37,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ClientTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/ClientTests"
         ),
         .testTarget(

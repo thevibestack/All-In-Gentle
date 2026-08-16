@@ -75,9 +75,32 @@ final class SettingsTests: XCTestCase {
         XCTAssertNil(store.llmProviderConfiguration)
     }
 
-    func testAISettingsViewCanBeConstructed() {
+    func testDefaultURLSessionUsesAppDefaultConfiguration() {
         let view = AISettingsView()
-        XCTAssertNotNil(view)
+
+        guard
+            let session = Mirror(reflecting: view).children.first(where: { $0.label == "urlSession" })?.value
+                as? URLSession
+        else {
+            XCTFail("Expected AISettingsView to expose a urlSession stored property")
+            return
+        }
+
+        XCTAssertEqual(
+            session.configuration.timeoutIntervalForRequest,
+            30,
+            "Default request timeout must match makeAppDefault()"
+        )
+        XCTAssertEqual(
+            session.configuration.timeoutIntervalForResource,
+            600,
+            "Default resource timeout must match makeAppDefault()"
+        )
+        XCTAssertEqual(
+            session.configuration.waitsForConnectivity,
+            true,
+            "Default session must wait for connectivity"
+        )
     }
 
     func testAppStateInitializesMigration() {

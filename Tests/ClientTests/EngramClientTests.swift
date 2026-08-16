@@ -1,32 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
-
-private final class MockURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-    nonisolated(unsafe) static var requestCount = 0
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        Self.requestCount += 1
-        guard let handler = Self.requestHandler else {
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
-        do {
-            let (response, data) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
-}
+import AllInGentleTestSupport
 
 final class EngramClientTests: XCTestCase {
 
@@ -43,7 +18,7 @@ final class EngramClientTests: XCTestCase {
         status: Int = 200,
         onRequest: ((URLRequest) -> Void)? = nil
     ) {
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             onRequest?(request)
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -297,8 +272,8 @@ final class EngramClientTests: XCTestCase {
     // MARK: - T7: empty-q 3-arg search throws before any request (D9)
 
     func testSearchThreeArgEmptyQueryThrowsBeforeAnyRequest() async throws {
-        MockURLProtocol.requestCount = 0
-        stubJSON("[]")
+        var requestsMade = 0
+        stubJSON("[]") { _ in requestsMade += 1 }
 
         let client = makeClient()
         do {
@@ -309,7 +284,7 @@ final class EngramClientTests: XCTestCase {
         }
 
         XCTAssertEqual(
-            MockURLProtocol.requestCount,
+            requestsMade,
             0,
             "D9: no request may be made for an empty q"
         )
