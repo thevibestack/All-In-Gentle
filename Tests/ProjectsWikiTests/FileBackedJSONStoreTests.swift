@@ -10,7 +10,6 @@ final class FileBackedJSONStoreTests: XCTestCase {
     private var tempDirectory: URL!
 
     override func setUp() async throws {
-        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("file-backed-store-tests-\(UUID().uuidString)")
     }
@@ -19,7 +18,6 @@ final class FileBackedJSONStoreTests: XCTestCase {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
-        try await super.tearDown()
     }
 
     private struct Record: Codable, Identifiable, Sendable, Equatable {

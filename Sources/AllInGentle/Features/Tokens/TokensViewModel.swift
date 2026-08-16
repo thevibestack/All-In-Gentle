@@ -38,6 +38,7 @@ public final class TokensViewModel {
         defer { isLoading = false }
 
         do {
+            errorMessage = nil
             let page = try await client.tokenUsagePage(limit: pageSize)
             items = page
             nextCursor = page.last.flatMap { makeCursor(from: $0) }
@@ -54,6 +55,7 @@ public final class TokensViewModel {
         defer { isLoading = false }
 
         do {
+            errorMessage = nil
             let page = try await client.tokenUsagePage(after: nextCursor, limit: pageSize)
             items.append(contentsOf: page)
             nextCursor = page.last.flatMap { makeCursor(from: $0) }

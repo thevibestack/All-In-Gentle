@@ -14,7 +14,6 @@ final class KeychainStoreTests: XCTestCase {
     private var service: String!
 
     override func setUp() async throws {
-        try await super.setUp()
         service = "all-in-gentle.tests.\(UUID().uuidString)"
     }
 
@@ -26,7 +25,6 @@ final class KeychainStoreTests: XCTestCase {
             ]
             SecItemDelete(query as CFDictionary)
         }
-        try await super.tearDown()
     }
 
     private func makeStore() -> KeychainStore {
