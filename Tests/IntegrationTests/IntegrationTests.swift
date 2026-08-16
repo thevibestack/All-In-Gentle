@@ -223,6 +223,141 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(projects.allSatisfy { $0.source == .engram })
     }
 
+    // MARK: - Engram parsing edge cases (approval-pin, F21 PR 1)
+
+    func testEngramSearchThrowsSourceUnavailableOnNon200() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+            return (response, Data())
+        }
+
+        let client = makeEngramClient()
+        do {
+            _ = try await client.search(query: "anything")
+            XCTFail("Expected sourceUnavailable for non-200 search response")
+        } catch {
+            guard case AllInGentleError.sourceUnavailable = error else {
+                return XCTFail("Expected sourceUnavailable, got \(error)")
+            }
+        }
+    }
+
+    func testEngramSearchThrowsOnMalformedJSON() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(#"{"invalid"#.utf8))
+        }
+
+        do {
+            _ = try await makeEngramClient().search(query: "q")
+            XCTFail("Malformed JSON must surface as an error, never a silent empty result")
+        } catch {
+            // Any error satisfies the contract — the failure is returning [].
+        }
+    }
+
+    func testEngramSearchReturnsEmptyForNonArrayBody() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(#"{"a":1}"#.utf8))
+        }
+
+        let results = try await makeEngramClient().search(query: "q")
+        XCTAssertTrue(results.isEmpty, "Non-array JSON body must map to an empty result")
+    }
+
+    func testEngramSearchDropsMissingTitleOrContentAndDefaultsTags() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let json = """
+                [
+                  {"sync_id": "keep-1", "title": "Kept", "content": "Body A", "tags": ["api"]},
+                  {"sync_id": "drop-1", "title": "No content"},
+                  {"sync_id": "drop-2", "content": "No title"},
+                  {"sync_id": "keep-2", "title": "No tags", "content": "Body B"}
+                ]
+                """
+            return (response, Data(json.utf8))
+        }
+
+        let results = try await makeEngramClient().search(query: "q")
+        XCTAssertEqual(
+            results.map(\.id), ["keep-1", "keep-2"], "Rows missing title or content must be dropped")
+        XCTAssertEqual(results[0].tags, ["api"])
+        XCTAssertEqual(results[1].tags, [], "Missing tags must default to an empty array")
+    }
+
+    func testEngramSearchUsesIDAsSyncIDFallback() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let json = """
+                [
+                  {"id": 42, "title": "ID only", "content": "Body"}
+                ]
+                """
+            return (response, Data(json.utf8))
+        }
+
+        let results = try await makeEngramClient().search(query: "q")
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(results[0].id, "42", "id-only row must fall back to String(describing:) of id")
+    }
+
+    func testEngramSearchGeneratesUUIDWhenIDAndSyncIDMissing() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let json = """
+                [
+                  {"title": "No IDs", "content": "Body A"},
+                  {"title": "No IDs", "content": "Body B"}
+                ]
+                """
+            return (response, Data(json.utf8))
+        }
+
+        let results = try await makeEngramClient().search(query: "q")
+        XCTAssertEqual(results.count, 2)
+        XCTAssertEqual(results[0].id.count, 36, "Fallback id must be a UUID-shaped string")
+        XCTAssertEqual(results[1].id.count, 36)
+        XCTAssertNotEqual(
+            results[0].id, results[1].id, "Fallback ids must not be frozen; each row gets its own UUID")
+    }
+
+    func testEngramSearchFallsBackToFiniteDateWhenDatesUnparseable() async throws {
+        MockURLProtocol.box.set { request in
+            guard let url = request.url else { throw URLError(.badURL) }
+            XCTAssertEqual(url.path, "/search")
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let json = """
+                [
+                  {"sync_id": "obs-bad-dates", "title": "Bad dates", "content": "Body",
+                   "created_at": "not-a-date", "updated_at": "also-not-a-date"}
+                ]
+                """
+            return (response, Data(json.utf8))
+        }
+
+        let results = try await makeEngramClient().search(query: "q")
+        XCTAssertEqual(results.count, 1)
+        let createdAt = results[0].createdAt
+        XCTAssertTrue(
+            createdAt.timeIntervalSinceReferenceDate.isFinite, "Fallback date must be finite")
+        XCTAssertLessThan(
+            abs(createdAt.timeIntervalSinceNow), 60, "Fallback date must be near now, never frozen")
+    }
+
     // MARK: - Engram live smoke (opt-in)
 
     func testEngramLiveHealthAndSearch() async throws {
