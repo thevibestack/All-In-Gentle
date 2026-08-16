@@ -8,3 +8,5 @@
 /.idea
 DerivedData/
 *.xcuserdata
+# Local agent tooling cache (machine-specific)
+.atl/
