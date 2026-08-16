@@ -25,6 +25,11 @@ let package = Package(
             dependencies: ["AllInGentleKit"],
             path: "Sources/AllInGentleApp"
         ),
+        .target(
+            name: "AllInGentleTestSupport",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/Support"
+        ),
         .testTarget(
             name: "ModelsTests",
             dependencies: ["AllInGentleKit"],
@@ -43,7 +48,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ProjectsWikiTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/ProjectsWikiTests"
         ),
         .testTarget(
