@@ -7,7 +7,6 @@ final class OpenSpecScannerTests: XCTestCase {
     private let scanner = OpenSpecScanner()
 
     override func setUp() async throws {
-        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("openspec-scanner-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
@@ -17,7 +16,6 @@ final class OpenSpecScannerTests: XCTestCase {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
-        try await super.tearDown()
     }
 
     private func write(_ content: String, to relativePath: String) throws {
