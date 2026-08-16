@@ -193,6 +193,13 @@ final class LLMServiceTests: XCTestCase {
 
         await viewModel.send()
 
+        // send() returns once the generation task is created; wait for the
+        // stream to complete before asserting its effects.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
+
         XCTAssertEqual(viewModel.messages.count, 2)
         XCTAssertEqual(viewModel.messages[0].role, .user)
         XCTAssertEqual(viewModel.messages[0].content, "Hi")
