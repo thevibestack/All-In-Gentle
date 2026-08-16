@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class WikiViewModelTests: XCTestCase {
@@ -19,8 +20,11 @@ final class WikiViewModelTests: XCTestCase {
         )
 
         viewModel.loadDocuments(forProjectPath: projectPath)
-        try await Task.sleep(for: .milliseconds(50))
+        let loaded = await waitUntil {
+            viewModel.documents.count == 2
+        }
 
+        XCTAssertTrue(loaded)
         XCTAssertEqual(viewModel.documents.count, 2)
         XCTAssertTrue(viewModel.documents.allSatisfy { $0.path.hasPrefix(projectPath) })
     }
@@ -35,15 +39,24 @@ final class WikiViewModelTests: XCTestCase {
             scanner: scanner
         )
         viewModel.loadDocuments(forProjectPath: "/tmp")
-        try await Task.sleep(for: .milliseconds(50))
+        let loaded = await waitUntil {
+            viewModel.documents.count == 1
+        }
+        XCTAssertTrue(loaded)
         XCTAssertEqual(viewModel.documents.count, 1)
 
         viewModel.selectDocument(viewModel.documents[0])
-        try await Task.sleep(for: .milliseconds(50))
+        let previewLoaded = await waitUntil {
+            !viewModel.previewText.isEmpty
+        }
+        XCTAssertTrue(previewLoaded)
         XCTAssertFalse(viewModel.previewText.isEmpty)
 
         viewModel.loadDocuments(forProjectPath: nil)
-        try await Task.sleep(for: .milliseconds(50))
+        let cleared = await waitUntil {
+            viewModel.documents.isEmpty && viewModel.previewText.isEmpty
+        }
+        XCTAssertTrue(cleared)
 
         XCTAssertTrue(viewModel.documents.isEmpty)
         XCTAssertNil(viewModel.selectedDocument)
@@ -67,12 +80,42 @@ final class WikiViewModelTests: XCTestCase {
         viewModel.selectedProjectPath = "/projects/p1"
 
         viewModel.searchQuery = "match"
-        try await Task.sleep(for: .milliseconds(400))
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
 
         XCTAssertEqual(engram.lastQuery, "match")
         XCTAssertEqual(engram.lastProject, "/projects/p1")
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.id, "m1")
+    }
+
+    func testSearchWithZeroDebounceExecutesImmediately() async throws {
+        let observation = MemoryObservation(
+            id: "m1",
+            title: "Match",
+            content: "Content",
+            project: "p1",
+            tags: []
+        )
+        let engram = StubEngramSearchProvider()
+        engram.results = [observation]
+        let viewModel = WikiViewModel(
+            engram: engram,
+            scanner: StubOpenSpecScanning(),
+            searchDebounce: .zero
+        )
+        viewModel.selectedProjectPath = "/projects/p1"
+
+        viewModel.searchQuery = "match"
+        let filled = await waitUntil(timeout: .milliseconds(200)) {
+            !viewModel.results.isEmpty
+        }
+
+        XCTAssertTrue(filled, "search must run without debounce delay when searchDebounce is .zero")
+        XCTAssertEqual(viewModel.results.first?.id, "m1")
+        XCTAssertEqual(engram.lastQuery, "match")
     }
 
     func testSearchSkippedWhenNoProjectSelected() async throws {
@@ -84,7 +127,13 @@ final class WikiViewModelTests: XCTestCase {
         )
 
         viewModel.searchQuery = "match"
-        try await Task.sleep(for: .milliseconds(400))
+
+        // No project selected: the search must be skipped. Bounded poll to
+        // surface any delayed (incorrect) search within the debounce window.
+        let searched = await waitUntil(timeout: .milliseconds(350)) {
+            engram.lastQuery != nil
+        }
+        XCTAssertFalse(searched)
 
         XCTAssertNil(engram.lastQuery)
         XCTAssertTrue(viewModel.results.isEmpty)
@@ -108,7 +157,10 @@ final class WikiViewModelTests: XCTestCase {
         viewModel.selectedProjectPath = "/projects/alpha"
 
         viewModel.searchQuery = "query"
-        try await Task.sleep(for: .milliseconds(400))
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
 
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.id, "a")
