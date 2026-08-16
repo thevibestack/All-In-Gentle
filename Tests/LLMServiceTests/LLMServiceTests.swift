@@ -59,7 +59,7 @@ final class LLMServiceTests: XCTestCase {
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}",
                 "data: {\"choices\":[{\"delta\":{\"content\":\" world\"},\"finish_reason\":\"stop\"}]}",
@@ -118,7 +118,7 @@ final class LLMServiceTests: XCTestCase {
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
         var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             capturedRequest = request
             let body = "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n"
             let response = HTTPURLResponse(
@@ -169,7 +169,7 @@ final class LLMServiceTests: XCTestCase {
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hola\"}}]}",
                 "data: {\"choices\":[{\"delta\":{\"content\":\" mundo\"},\"finish_reason\":\"stop\"}]}",
@@ -313,19 +313,39 @@ private actor MockKeychain: KeychainStoring {
     }
 }
 
+/// Per-instance handler box shared with `MockURLProtocol`.
+///
+/// `URLSession` instantiates `URLProtocol` subclasses via
+/// `init(request:cachedResponse:client:)`, so the handler cannot be injected
+/// through an initializer. A single immutable `static let` reference with
+/// NSLock-guarded interior mutability avoids the `nonisolated(unsafe) static
+/// var` data-race pattern (F22): the box is a constant, not a mutable static.
+private final class HandlerBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+
+    func set(_ handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)) {
+        lock.withLock { self.handler = handler }
+    }
+
+    func call(_ request: URLRequest) throws -> (HTTPURLResponse, Data) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let handler else { throw URLError(.resourceUnavailable) }
+        return try handler(request)
+    }
+}
+
 private final class MockURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    static let box = HandlerBox()
 
     override class func canInit(with request: URLRequest) -> Bool { true }
+
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        guard let handler = Self.requestHandler else {
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
         do {
-            let (response, data) = try handler(request)
+            let (response, data) = try Self.box.call(request)
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)
