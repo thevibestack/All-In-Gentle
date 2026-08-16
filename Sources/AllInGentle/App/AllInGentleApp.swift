@@ -42,12 +42,6 @@ public struct AllInGentleApp: App {
             }
 
             CommandGroup(replacing: .help) {
-                Button(L("shell.menu.about")) {}
-                    .accessibilityIdentifier("shell.menu.about")
-
-                Button(L("shell.menu.openSource")) {}
-                    .accessibilityIdentifier("shell.menu.openSource")
-
                 Divider()
 
                 Button(L("shell.menu.gettingStarted")) {
