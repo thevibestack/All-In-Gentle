@@ -7,7 +7,6 @@ final class ChatViewModelTests: XCTestCase {
     private var preferences: PreferencesStore!
 
     override func setUp() async throws {
-        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("chat-view-model-tests-\(UUID().uuidString)")
         let defaults = UserDefaults(suiteName: "chat-view-model-tests-\(UUID().uuidString)")!
@@ -19,7 +18,6 @@ final class ChatViewModelTests: XCTestCase {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
-        try await super.tearDown()
     }
 
     private func makeViewModel(service: LLMService = MockLLMService(chunks: [])) -> ChatViewModel {
