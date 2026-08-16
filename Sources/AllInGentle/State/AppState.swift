@@ -46,10 +46,12 @@ public final class AppState {
         self.showOnboarding = !(preferences.bool(for: .onboardingDismissed) || preferences.onboardingCompleted)
         self.selectedProjectPath = preferences.string(for: .lastProjectPath)
 
-        let migration = migrator ?? ProviderConfigurationMigrator(
-            preferences: preferences,
-            keychain: KeychainStore()
-        )
+        let migration =
+            migrator
+            ?? ProviderConfigurationMigrator(
+                preferences: preferences,
+                keychain: KeychainStore()
+            )
         Task {
             await migration.migrateIfNeeded()
         }

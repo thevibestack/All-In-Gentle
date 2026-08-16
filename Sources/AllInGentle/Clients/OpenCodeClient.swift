@@ -51,8 +51,9 @@ public actor OpenCodeClient {
         )
         return rows.compactMap { row in
             guard let id = row[0],
-                  let project = row[1],
-                  let title = row[2] else { return nil }
+                let project = row[1],
+                let title = row[2]
+            else { return nil }
             let cost = row[3].flatMap { Double($0) } ?? 0
             let input = row[4].flatMap { Int($0) } ?? 0
             let output = row[5].flatMap { Int($0) } ?? 0
@@ -80,8 +81,9 @@ public actor OpenCodeClient {
         )
         return rows.compactMap { row in
             guard let id = row[0],
-                  let project = row[1],
-                  let session = row[2] else { return nil }
+                let project = row[1],
+                let session = row[2]
+            else { return nil }
             let cost = row[3].flatMap { Double($0) } ?? 0
             let input = row[4].flatMap { Int($0) } ?? 0
             let output = row[5].flatMap { Int($0) } ?? 0
@@ -108,21 +110,23 @@ public actor OpenCodeClient {
         let sql: String
         if let cursor {
             let escapedID = escapeSQLString(cursor.id)
-            sql = base + """
-                 WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
-                 ORDER BY time_updated DESC, id DESC
-                 LIMIT \(limit)
-                 """
+            sql =
+                base + """
+                    WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
+                    ORDER BY time_updated DESC, id DESC
+                    LIMIT \(limit)
+                    """
         } else {
             sql = base + " ORDER BY time_updated DESC, id DESC LIMIT \(limit)"
         }
         let rows = try executeReadOnly(sql)
         return rows.compactMap { row in
             guard let id = row[0],
-                  let project = row[1],
-                  let session = row[2],
-                  let timeUpdatedString = row[6],
-                  let timeUpdated = Double(timeUpdatedString) else { return nil }
+                let project = row[1],
+                let session = row[2],
+                let timeUpdatedString = row[6],
+                let timeUpdated = Double(timeUpdatedString)
+            else { return nil }
             let cost = row[3].flatMap { Double($0) } ?? 0
             let input = row[4].flatMap { Int($0) } ?? 0
             let output = row[5].flatMap { Int($0) } ?? 0
@@ -167,7 +171,7 @@ public actor OpenCodeClient {
         var results: [[String?]] = []
         while sqlite3_step(statement) == SQLITE_ROW {
             var row = [String?](repeating: nil, count: columnCount)
-            for i in 0 ..< columnCount {
+            for i in 0..<columnCount {
                 if let text = sqlite3_column_text(statement, Int32(i)) {
                     let cString = UnsafeRawPointer(text).assumingMemoryBound(to: Int8.self)
                     row[i] = String(cString: cString)

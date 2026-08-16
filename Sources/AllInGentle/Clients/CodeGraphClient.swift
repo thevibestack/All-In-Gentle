@@ -128,7 +128,8 @@ public actor CodeGraphClient {
             executable: URL(fileURLWithPath: "/usr/bin/find"),
             arguments: [root, "-name", ".codegraph", "-maxdepth", "4", "-type", "d"]
         )
-        return output
+        return
+            output
             .split(separator: "\n")
             .map(String.init)
             .filter { !$0.isEmpty }

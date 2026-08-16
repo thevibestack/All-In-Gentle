@@ -27,10 +27,12 @@ public actor ProjectStore: ProjectStoring {
         directory: URL? = nil,
         fileManager: FileManager = .default
     ) {
-        let resolvedDirectory = directory ?? Self.resolveDefaultDirectory(
-            fileManager: fileManager,
-            subdirectory: "Projects"
-        )
+        let resolvedDirectory =
+            directory
+            ?? Self.resolveDefaultDirectory(
+                fileManager: fileManager,
+                subdirectory: "Projects"
+            )
         self.store = FileBackedJSONStore(
             directory: resolvedDirectory,
             subdirectory: "Projects",

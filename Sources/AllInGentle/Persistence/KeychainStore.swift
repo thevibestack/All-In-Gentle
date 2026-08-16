@@ -43,7 +43,7 @@ public actor KeychainStore: KeychainStoring {
         let query = baseQuery(key: key)
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
         ]
 
         let updateStatus = secItem.update(query, attributesToUpdate: attributes)
@@ -89,7 +89,7 @@ public actor KeychainStore: KeychainStoring {
     private func baseQuery(key: String) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
         ]
         if let service {
             query[kSecAttrService as String] = service

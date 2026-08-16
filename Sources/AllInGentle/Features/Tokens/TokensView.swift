@@ -11,8 +11,10 @@ struct TokensView: View {
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         HStack(spacing: AGSpacing.xSmall) {
-                            AGButton("tokens.export", systemImage: "square.and.arrow.up", variant: .secondary, action: {})
-                                .disabled(true)
+                            AGButton(
+                                "tokens.export", systemImage: "square.and.arrow.up", variant: .secondary, action: {}
+                            )
+                            .disabled(true)
                             AGStatusBadge(status: .placeholder)
                         }
                     }

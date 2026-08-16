@@ -22,11 +22,13 @@ public actor OpenSpecScanner {
         guard manager.fileExists(atPath: root) else {
             throw AllInGentleError.sourceUnavailable("OpenSpec root does not exist: \(root)")
         }
-        guard let enumerator = manager.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) else {
+        guard
+            let enumerator = manager.enumerator(
+                at: url,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            )
+        else {
             throw AllInGentleError.sourceUnavailable("Unable to enumerate OpenSpec root: \(root)")
         }
 
@@ -46,11 +48,13 @@ public actor OpenSpecScanner {
         guard manager.fileExists(atPath: root) else {
             throw AllInGentleError.sourceUnavailable("OpenSpec root does not exist: \(root)")
         }
-        guard let enumerator = manager.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else {
+        guard
+            let enumerator = manager.enumerator(
+                at: url,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+        else {
             throw AllInGentleError.sourceUnavailable("Unable to enumerate OpenSpec root: \(root)")
         }
 

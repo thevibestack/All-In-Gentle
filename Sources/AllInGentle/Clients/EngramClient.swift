@@ -40,7 +40,7 @@ public actor EngramClient {
     public func search(query: String, limit: Int = 20) async throws -> [MemoryObservation] {
         try await fetchSearchResults(queryItems: [
             URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "limit", value: String(limit))
+            URLQueryItem(name: "limit", value: String(limit)),
         ])
     }
 
@@ -54,7 +54,7 @@ public actor EngramClient {
         return try await fetchSearchResults(queryItems: [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "project", value: projectName(from: project)),
-            URLQueryItem(name: "limit", value: String(limit))
+            URLQueryItem(name: "limit", value: String(limit)),
         ])
     }
 
@@ -82,10 +82,12 @@ public actor EngramClient {
     }
 
     private func fetchSearchResults(queryItems: [URLQueryItem]) async throws -> [MemoryObservation] {
-        guard var components = URLComponents(
-            url: baseURL.appendingPathComponent("search"),
-            resolvingAgainstBaseURL: true
-        ) else {
+        guard
+            var components = URLComponents(
+                url: baseURL.appendingPathComponent("search"),
+                resolvingAgainstBaseURL: true
+            )
+        else {
             throw AllInGentleError.invalidConfiguration("Invalid Engram search URL")
         }
         components.queryItems = queryItems
@@ -100,10 +102,12 @@ public actor EngramClient {
     }
 
     private func fetchObservations(project: String?, limit: Int) async throws -> [MemoryObservation] {
-        guard var components = URLComponents(
-            url: baseURL.appendingPathComponent("observations"),
-            resolvingAgainstBaseURL: true
-        ) else {
+        guard
+            var components = URLComponents(
+                url: baseURL.appendingPathComponent("observations"),
+                resolvingAgainstBaseURL: true
+            )
+        else {
             throw AllInGentleError.invalidConfiguration("Invalid Engram observations URL")
         }
         var queryItems: [URLQueryItem] = []

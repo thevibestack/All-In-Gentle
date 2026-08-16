@@ -12,7 +12,8 @@ public enum ProjectPathNormalizer {
         var normalized = (path as NSString).expandingTildeInPath
         normalized = (normalized as NSString).standardizingPath
 
-        let resolved = FileManager.default.fileExists(atPath: normalized)
+        let resolved =
+            FileManager.default.fileExists(atPath: normalized)
             ? (normalized as NSString).resolvingSymlinksInPath
             : normalized
 

@@ -11,8 +11,10 @@ struct ServicesView: View {
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         HStack(spacing: AGSpacing.xSmall) {
-                            AGButton("services.safeRestart", systemImage: "arrow.clockwise", variant: .secondary, action: {})
-                                .disabled(true)
+                            AGButton(
+                                "services.safeRestart", systemImage: "arrow.clockwise", variant: .secondary, action: {}
+                            )
+                            .disabled(true)
                             AGStatusBadge(status: .placeholder)
                         }
                     }

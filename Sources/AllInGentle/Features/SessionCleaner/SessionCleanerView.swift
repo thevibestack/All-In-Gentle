@@ -70,7 +70,9 @@ private struct SessionGroupRow: View {
             HStack(spacing: AGSpacing.large) {
                 LabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
                 LabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
-                LabeledValue(label: L("sessionCleaner.latest"), value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
+                LabeledValue(
+                    label: L("sessionCleaner.latest"),
+                    value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
             }
 
             if !group.sessions.isEmpty {

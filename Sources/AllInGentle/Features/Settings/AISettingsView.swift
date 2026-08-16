@@ -245,8 +245,9 @@ public struct AISettingsView: View {
         }
 
         guard let url = URL(string: config.baseURL),
-              let scheme = url.scheme,
-              scheme == "https" || scheme == "http" else {
+            let scheme = url.scheme,
+            scheme == "https" || scheme == "http"
+        else {
             validationMessage = L("settings.ai.error.invalidURL")
             return false
         }

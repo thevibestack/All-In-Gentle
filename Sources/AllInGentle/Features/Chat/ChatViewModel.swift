@@ -28,9 +28,9 @@ public final class ChatViewModel {
         if searchQuery.isEmpty { return sessions }
         return sessions.filter { session in
             session.displayTitle.localizedCaseInsensitiveContains(searchQuery)
-            || session.messages.contains {
-                $0.role == .user && $0.content.localizedCaseInsensitiveContains(searchQuery)
-            }
+                || session.messages.contains {
+                    $0.role == .user && $0.content.localizedCaseInsensitiveContains(searchQuery)
+                }
         }
     }
 
@@ -51,7 +51,7 @@ public final class ChatViewModel {
             L("chat.sidebar.today"),
             L("chat.sidebar.yesterday"),
             L("chat.sidebar.previous7Days"),
-            L("chat.sidebar.older")
+            L("chat.sidebar.older"),
         ]
         var groups: [String: [ChatSession]] = Dictionary(uniqueKeysWithValues: keys.map { ($0, []) })
 
@@ -62,7 +62,8 @@ public final class ChatViewModel {
             } else if calendar.isDateInYesterday(session.updatedAt) {
                 key = keys[1]
             } else if let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now),
-                      session.updatedAt >= calendar.startOfDay(for: sevenDaysAgo) {
+                session.updatedAt >= calendar.startOfDay(for: sevenDaysAgo)
+            {
                 key = keys[2]
             } else {
                 key = keys[3]
@@ -84,8 +85,8 @@ public final class ChatViewModel {
     /// Whether the current input can be submitted.
     public var canSend: Bool {
         !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && !isStreaming
-        && providerAvailable
+            && !isStreaming
+            && providerAvailable
     }
 
     /// The currently selected session, if any.
