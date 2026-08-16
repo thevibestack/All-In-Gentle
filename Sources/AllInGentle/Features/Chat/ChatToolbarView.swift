@@ -27,9 +27,11 @@ struct ChatToolbarView: View {
                     Image(systemName: "cpu")
                         .font(AGTypography.caption)
                         .foregroundStyle(AGColors.textSecondary)
-                    Text(viewModel.providerAvailable ? L("chat.toolbar.status.ready") : L("chat.toolbar.status.disabled"))
-                        .font(AGTypography.caption)
-                        .foregroundStyle(viewModel.providerAvailable ? AGColors.statusLive : AGColors.statusDisabled)
+                    Text(
+                        viewModel.providerAvailable ? L("chat.toolbar.status.ready") : L("chat.toolbar.status.disabled")
+                    )
+                    .font(AGTypography.caption)
+                    .foregroundStyle(viewModel.providerAvailable ? AGColors.statusLive : AGColors.statusDisabled)
                 }
                 Menu {
                     Button(L("chat.toolbar.rename")) {

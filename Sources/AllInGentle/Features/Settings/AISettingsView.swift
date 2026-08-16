@@ -210,7 +210,8 @@ public struct AISettingsView: View {
             return nil
         case .failure(let error):
             guard let keychainError = error as? AllInGentleError,
-                  case .persistenceFailure(let message) = keychainError else {
+                case .persistenceFailure(let message) = keychainError
+            else {
                 return L("settings.ai.error.keychainLoadFailed")
             }
             return message
@@ -333,7 +334,7 @@ extension AISettingsView {
         urlSession: URLSession
     ) async -> AIConnectionTestResult {
         let account = LLMProviderConfiguration.keychainAccount(for: configuration.id)
-        let previousKey = await keychain.load(key: account)
+        let previousKey = try? await keychain.load(key: account)
 
         do {
             try await keychain.save(key: account, value: apiKey)
@@ -370,7 +371,7 @@ extension AISettingsView {
         if let previousKey {
             try? await keychain.save(key: account, value: previousKey)
         } else {
-            await keychain.delete(key: account)
+            try? await keychain.delete(key: account)
         }
     }
 }

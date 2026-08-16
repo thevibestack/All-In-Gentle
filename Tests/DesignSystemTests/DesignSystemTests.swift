@@ -5,9 +5,6 @@ import XCTest
 
 @MainActor
 final class DesignSystemTests: XCTestCase {
-
-@MainActor
-final class DesignSystemTests: XCTestCase {
     // MARK: - Color tokens
 
     func testColorTokensExistInBothAppearances() {
@@ -24,7 +21,7 @@ final class DesignSystemTests: XCTestCase {
             AGColors.statusLive,
             AGColors.statusPlaceholder,
             AGColors.statusDisabled,
-            AGColors.statusError
+            AGColors.statusError,
         ]
         XCTAssertEqual(tokens.count, 13)
     }

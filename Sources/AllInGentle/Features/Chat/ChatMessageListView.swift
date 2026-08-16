@@ -11,7 +11,10 @@ struct ChatMessageListView: View {
                     MessageRow(message: message)
                         .id(message.id)
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: AGSpacing.xxSmall, leading: AGSpacing.medium, bottom: AGSpacing.xxSmall, trailing: AGSpacing.medium))
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: AGSpacing.xxSmall, leading: AGSpacing.medium, bottom: AGSpacing.xxSmall,
+                                trailing: AGSpacing.medium))
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)

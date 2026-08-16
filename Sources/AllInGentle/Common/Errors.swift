@@ -19,6 +19,8 @@ extension AllInGentleError: LocalizedError {
             return L("errors.invalidConfiguration", detail)
         case .persistenceFailure(let detail):
             return L("errors.persistenceFailure", detail)
+        case .processTimedOut(let detail):
+            return L("errors.processTimedOut", detail)
         }
     }
 }

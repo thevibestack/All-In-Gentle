@@ -22,7 +22,7 @@ final class KeychainStoreTests: XCTestCase {
         if let service {
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: service
+                kSecAttrService as String: service,
             ]
             SecItemDelete(query as CFDictionary)
         }

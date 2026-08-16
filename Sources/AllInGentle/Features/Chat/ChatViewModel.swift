@@ -246,7 +246,8 @@ public final class ChatViewModel {
             return
         }
         guard let session = selectedSession,
-              session.messages.last(where: { $0.role == .user }) != nil else { return }
+            session.messages.last(where: { $0.role == .user }) != nil
+        else { return }
         errorMessage = nil
         isStreaming = true
         await streamResponse(for: session)

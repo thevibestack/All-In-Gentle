@@ -145,4 +145,5 @@
 "errors.readOnlyViolation" = "Esta acción es de solo lectura y no se puede realizar.";
 "errors.sourceUnavailable" = "Una fuente de datos no está disponible: %@";
 "errors.invalidConfiguration" = "Configuración inválida: %@";
+"errors.processTimedOut" = "La operación expiró: %@";
 "errors.persistenceFailure" = "No se pudieron guardar tus datos: %@";

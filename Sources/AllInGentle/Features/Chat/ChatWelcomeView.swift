@@ -53,7 +53,7 @@ struct ChatWelcomeView: View {
         [
             L("chat.suggested.1"),
             L("chat.suggested.2"),
-            L("chat.suggested.3")
+            L("chat.suggested.3"),
         ]
     }
 }

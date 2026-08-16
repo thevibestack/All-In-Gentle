@@ -42,6 +42,7 @@ public actor EngramSearchProviderStub: EngramSearchProvider {
     public func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
         capturedProjectFilter = project
         capturedSearchQuery = query
+        lastQuery = query
         lastProject = project
         try await Task.sleep(for: sleepDuration)
         if let thrownError { throw thrownError }

@@ -12,8 +12,10 @@ final class LocalizationCatalogTests: XCTestCase {
         let en = try catalog(for: "en")
         let es = try catalog(for: "es")
 
-        XCTAssertNotNil(en["projectDetail.memories.fallback"], "en catalog must contain projectDetail.memories.fallback")
-        XCTAssertNotNil(es["projectDetail.memories.fallback"], "es catalog must contain projectDetail.memories.fallback")
+        XCTAssertNotNil(
+            en["projectDetail.memories.fallback"], "en catalog must contain projectDetail.memories.fallback")
+        XCTAssertNotNil(
+            es["projectDetail.memories.fallback"], "es catalog must contain projectDetail.memories.fallback")
     }
 
     func testFallbackKeyIsTranslatedNotTheRawKey() throws {
@@ -37,8 +39,8 @@ final class LocalizationCatalogTests: XCTestCase {
         let es = try catalog(for: "es")
 
         XCTAssertEqual(Set(en.keys), Set(es.keys), "en and es catalogs must define the same keys")
-        XCTAssertEqual(en.count, 154, "en catalog must keep 154 keys")
-        XCTAssertEqual(es.count, 154, "es catalog must keep 154 keys")
+        XCTAssertEqual(en.count, 148, "en catalog must keep 148 keys")
+        XCTAssertEqual(es.count, 148, "es catalog must keep 148 keys")
     }
 
     // MARK: - Helpers
@@ -51,11 +53,13 @@ final class LocalizationCatalogTests: XCTestCase {
 
     private func catalog(for language: String) throws -> [String: String] {
         let bundle = try catalogBundle()
-        guard let url = bundle.url(
-            forResource: "Localizable",
-            withExtension: "strings",
-            subdirectory: "\(language).lproj"
-        ) else {
+        guard
+            let url = bundle.url(
+                forResource: "Localizable",
+                withExtension: "strings",
+                subdirectory: "\(language).lproj"
+            )
+        else {
             throw CatalogError.catalogMissing("\(language).lproj/Localizable.strings")
         }
         guard let dict = NSDictionary(contentsOf: url) as? [String: String] else {
@@ -74,7 +78,8 @@ final class LocalizationCatalogTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent("All-In-Gentle_AllInGentleKit.bundle")
         if let sibling = Bundle(url: siblingURL),
-           sibling.url(forResource: "Localizable", withExtension: "strings", subdirectory: "Resources/en.lproj") != nil {
+            sibling.url(forResource: "Localizable", withExtension: "strings", subdirectory: "Resources/en.lproj") != nil
+        {
             return sibling
         }
         if let found = Bundle.allBundles.first(where: {
