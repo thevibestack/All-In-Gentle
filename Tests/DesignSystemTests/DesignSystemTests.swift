@@ -135,6 +135,11 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertTrue(focused)
     }
 
+    func testAGSearchFieldStoresPlaceholderKey() {
+        let field = AGSearchField(text: .constant(""), placeholderKey: "chat.sidebar.search")
+        XCTAssertEqual(field.placeholderKey, "chat.sidebar.search")
+    }
+
     // MARK: - Chat toolbar catalog keys
 
     func testChatToolbarMenuKeyResolves() {

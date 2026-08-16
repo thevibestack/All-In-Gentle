@@ -33,6 +33,7 @@ public struct AGSearchField: View {
                     .font(AGTypography.body)
                     .foregroundStyle(AGColors.textPrimary)
                     .focused($fieldFocused)
+                    .accessibilityLabel(L(placeholderKey))
 
                 if text.isEmpty && !fieldFocused {
                     Text(L(placeholderKey))

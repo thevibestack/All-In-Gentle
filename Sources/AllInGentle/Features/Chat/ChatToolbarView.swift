@@ -15,7 +15,7 @@ struct ChatToolbarView: View {
                 EmptyView()
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
-            .opacity(0)
+            .accessibilityHidden(true)
             .frame(width: 0, height: 0)
 
             if let session = viewModel.selectedSession {
@@ -54,6 +54,7 @@ struct ChatToolbarView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .frame(width: AGSpacing.iconLarge)
+                .accessibilityLabel(L("chat.toolbar.menu"))
             } else {
                 Spacer()
             }

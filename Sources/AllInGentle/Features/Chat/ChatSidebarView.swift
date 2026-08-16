@@ -27,6 +27,7 @@ struct ChatSidebarView: View {
                 .buttonStyle(.plain)
                 .keyboardShortcut("n", modifiers: .command)
                 .help(L("chat.sidebar.newChat"))
+                .accessibilityLabel(L("chat.sidebar.newChat"))
             }
             AGSearchField(
                 text: $viewModel.searchQuery,
