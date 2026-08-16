@@ -6,7 +6,6 @@ final class ChatSessionStoreTests: XCTestCase {
     private var tempDirectory: URL!
 
     override func setUp() async throws {
-        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("chat-session-store-tests-\(UUID().uuidString)")
     }
@@ -15,7 +14,6 @@ final class ChatSessionStoreTests: XCTestCase {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
-        try await super.tearDown()
     }
 
     private func makeStore() -> ChatSessionStore {
