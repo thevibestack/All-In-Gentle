@@ -124,12 +124,13 @@ public actor OpenCodeClient {
     }
 
     public func tokenUsage(limit: Int = 100) async throws -> [TokenUsage] {
+        let clamped = max(0, limit)
         let rows = try executeReadOnly(
             """
             SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
             FROM session
             ORDER BY time_updated DESC
-            LIMIT \(limit)
+            LIMIT \(clamped)
             """
         )
         return rows.compactMap { row in
@@ -156,21 +157,25 @@ public actor OpenCodeClient {
     }
 
     public func tokenUsagePage(after cursor: TokenCursor? = nil, limit: Int = 50) async throws -> [TokenUsage] {
+        let clamped = max(0, limit)
         let base = """
             SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
             FROM session
             """
         let sql: String
         if let cursor {
+            guard cursor.timeUpdated.isFinite else {
+                throw AllInGentleError.sourceUnavailable("non-finite cursor")
+            }
             let escapedID = escapeSQLString(cursor.id)
             sql =
                 base + """
                     WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
                     ORDER BY time_updated DESC, id DESC
-                    LIMIT \(limit)
+                    LIMIT \(clamped)
                     """
         } else {
-            sql = base + " ORDER BY time_updated DESC, id DESC LIMIT \(limit)"
+            sql = base + " ORDER BY time_updated DESC, id DESC LIMIT \(clamped)"
         }
         let rows = try executeReadOnly(sql)
         return rows.compactMap { row in

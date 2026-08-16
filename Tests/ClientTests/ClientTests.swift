@@ -203,6 +203,40 @@ final class ClientTests: XCTestCase {
             page.first?.estimatedCost, 0.12345678901234567, "REAL cost must be read via sqlite3_column_double")
     }
 
+    // MARK: - OpenCodeClient limit clamp + non-finite cursor guard (F25)
+
+    func testTokenUsagePageClampsNegativeLimitToZero() async throws {
+        var seed = Self.sessionSeed
+        for i in 0..<5 {
+            seed += "INSERT INTO session VALUES ('s\(i)','p','t\(i)',0.1,10,20,\(1_000 + i));"
+        }
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let page = try await client.tokenUsagePage(limit: -1)
+
+        XCTAssertEqual(page.count, 0, "LIMIT -1 must clamp to 0, not fetch all rows")
+
+        let usage = try await client.tokenUsage(limit: -1)
+        XCTAssertEqual(usage.count, 0, "tokenUsage must clamp negative limit to 0 as well")
+    }
+
+    func testTokenUsagePageRejectsNonFiniteCursor() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,1000);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        for bad in [Double.nan, Double.infinity] {
+            let cursor = TokenCursor(timeUpdated: bad, id: "s1")
+            do {
+                _ = try await client.tokenUsagePage(after: cursor, limit: 10)
+                XCTFail("Non-finite cursor should be rejected")
+            } catch let error as AllInGentleError {
+                XCTAssertEqual(error, .sourceUnavailable("non-finite cursor"))
+            }
+        }
+    }
+
     func testProcessMonitorCanStartMonitoringSequence() async {
         let runner = CapturingProcessRunner()
         await runner.setNextOutput("")
