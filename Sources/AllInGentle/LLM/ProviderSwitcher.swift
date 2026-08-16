@@ -14,7 +14,7 @@ public actor ProviderSwitcher: LLMService {
     public init(
         preferences: PreferencesStore = PreferencesStore(),
         keychain: any KeychainStoring = KeychainStore(),
-        urlSession: URLSession = .shared
+        urlSession: URLSession = URLSession(configuration: .makeAppDefault())
     ) {
         self.preferences = preferences
         self.keychain = keychain

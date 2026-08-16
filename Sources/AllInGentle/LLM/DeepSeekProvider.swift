@@ -8,7 +8,7 @@ public actor DeepSeekProvider: LLMService {
 
     public init(
         configuration: LLMProviderConfiguration,
-        urlSession: URLSession = .shared,
+        urlSession: URLSession = URLSession(configuration: .makeAppDefault()),
         keychain: any KeychainStoring
     ) {
         self.configuration = configuration
