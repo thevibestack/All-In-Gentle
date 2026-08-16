@@ -58,7 +58,8 @@ final class ProjectDetailViewModelTests: XCTestCase {
             project: projectPath,
             tags: []
         )
-        let document = OpenSpecScanner.Document(id: "\(projectPath)/spec.md", path: "\(projectPath)/spec.md", title: "Spec")
+        let document = OpenSpecScanner.Document(
+            id: "\(projectPath)/spec.md", path: "\(projectPath)/spec.md", title: "Spec")
 
         let engram = StubEngramSearchProviderActor(results: [memory], observationsResults: [memory])
         let scanner = StubOpenSpecScanning(documents: [document])

@@ -67,7 +67,7 @@ final class ProjectsWikiTests: XCTestCase {
         )
         let providers: [any ProjectSourceProvider] = [
             StubProjectSourceProvider(projects: [openCode]),
-            StubProjectSourceProvider(projects: [codeGraph])
+            StubProjectSourceProvider(projects: [codeGraph]),
         ]
         let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()
@@ -94,7 +94,7 @@ final class ProjectsWikiTests: XCTestCase {
         )
         let providers: [any ProjectSourceProvider] = [
             StubProjectSourceProvider(projects: [openCode]),
-            StubProjectSourceProvider(projects: [codeGraph])
+            StubProjectSourceProvider(projects: [codeGraph]),
         ]
         let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()

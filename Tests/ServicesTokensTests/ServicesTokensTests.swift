@@ -7,7 +7,7 @@ final class ServicesTokensTests: XCTestCase {
         let monitor = ProcessMonitor(interval: .seconds(1), runner: runner)
         let services = [
             ServiceDescriptor(id: "engram", name: "Engram", processName: "engram", port: 7437),
-            ServiceDescriptor(id: "codegraph", name: "CodeGraph", processName: "codegraph")
+            ServiceDescriptor(id: "codegraph", name: "CodeGraph", processName: "codegraph"),
         ]
 
         let statuses = await monitor.statuses(for: services)

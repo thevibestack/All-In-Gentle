@@ -28,14 +28,16 @@ final class SmokeTests: XCTestCase {
 
     func testAllSixSidebarItemsAreDefined() {
         let items = AppState.AppTab.allCases
-        XCTAssertEqual(items.map(\.rawValue), [
-            "projects",
-            "wiki",
-            "services",
-            "tokens",
-            "chat",
-            "sessionCleaner"
-        ])
+        XCTAssertEqual(
+            items.map(\.rawValue),
+            [
+                "projects",
+                "wiki",
+                "services",
+                "tokens",
+                "chat",
+                "sessionCleaner",
+            ])
     }
 
     func testSidebarItemLabelsAreLocalized() {

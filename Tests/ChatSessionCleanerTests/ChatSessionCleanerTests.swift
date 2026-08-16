@@ -12,7 +12,7 @@ final class ChatSessionCleanerTests: XCTestCase {
         let service = MockLLMService(chunks: [
             ChatChunk(textDelta: "Hola"),
             ChatChunk(textDelta: " mundo"),
-            ChatChunk(textDelta: nil, finishReason: "stop")
+            ChatChunk(textDelta: nil, finishReason: "stop"),
         ])
         let viewModel = ChatViewModel(
             service: service,
@@ -91,11 +91,11 @@ final class ChatSessionCleanerTests: XCTestCase {
                 totalTokens: 30,
                 estimatedCost: 0.0003,
                 latestDate: Date(timeIntervalSince1970: 1500)
-            )
+            ),
         ]
         let projects = [
             Project(id: "proj-a", name: "Project Alpha", path: "/alpha", source: .opencode),
-            Project(id: "proj-b", name: "", path: "/beta", source: .opencode)
+            Project(id: "proj-b", name: "", path: "/beta", source: .opencode),
         ]
 
         let viewModel = SessionCleanerViewModel(sessions: sessions, projects: projects)
@@ -134,7 +134,7 @@ final class ChatSessionCleanerTests: XCTestCase {
                 totalTokens: 1,
                 estimatedCost: 0,
                 latestDate: Date()
-            )
+            ),
         ]
 
         let viewModel = SessionCleanerViewModel(sessions: sessions, projects: [])

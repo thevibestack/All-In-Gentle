@@ -77,11 +77,11 @@ final class IntegrationTests: XCTestCase {
         var writableDB: OpaquePointer?
         XCTAssertEqual(sqlite3_open(tempURL.path, &writableDB), SQLITE_OK)
         let sql = """
-        CREATE TABLE session (id TEXT PRIMARY KEY, project_id TEXT, title TEXT, cost REAL,
-                              tokens_input INTEGER, tokens_output INTEGER, time_updated INTEGER);
-        INSERT INTO session VALUES ('s1','all-in-gentle','Auth fix',0.25,120,30,1700000000000);
-        INSERT INTO session VALUES ('s2','all-in-gentle','Wiki add',0.10,50,10,1700000001000);
-        """
+            CREATE TABLE session (id TEXT PRIMARY KEY, project_id TEXT, title TEXT, cost REAL,
+                                  tokens_input INTEGER, tokens_output INTEGER, time_updated INTEGER);
+            INSERT INTO session VALUES ('s1','all-in-gentle','Auth fix',0.25,120,30,1700000000000);
+            INSERT INTO session VALUES ('s2','all-in-gentle','Wiki add',0.10,50,10,1700000001000);
+            """
         XCTAssertEqual(sqlite3_exec(writableDB, sql, nil, nil, nil), SQLITE_OK)
         // Close the writer BEFORE the read-only client opens the file (SQLite locking).
         sqlite3_close(writableDB)
@@ -155,25 +155,25 @@ final class IntegrationTests: XCTestCase {
             XCTAssertEqual(queryItems.first(where: { $0.name == "limit" })?.value, "5")
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let json = """
-            [
-              {
-                "sync_id": "obs-1",
-                "title": "Title A",
-                "content": "Body A",
-                "project": "gentle-ai",
-                "tags": ["decisions", "api"],
-                "created_at": "2026-08-15 10:00:00"
-              },
-              {
-                "sync_id": "obs-2",
-                "title": "Title B",
-                "content": "Body B",
-                "project": null,
-                "tags": [],
-                "updated_at": "2026-08-14 09:30:00"
-              }
-            ]
-            """
+                [
+                  {
+                    "sync_id": "obs-1",
+                    "title": "Title A",
+                    "content": "Body A",
+                    "project": "gentle-ai",
+                    "tags": ["decisions", "api"],
+                    "created_at": "2026-08-15 10:00:00"
+                  },
+                  {
+                    "sync_id": "obs-2",
+                    "title": "Title B",
+                    "content": "Body B",
+                    "project": null,
+                    "tags": [],
+                    "updated_at": "2026-08-14 09:30:00"
+                  }
+                ]
+                """
             return (response, Data(json.utf8))
         }
 
@@ -208,12 +208,12 @@ final class IntegrationTests: XCTestCase {
             XCTAssertEqual(queryItems.first(where: { $0.name == "limit" })?.value, "1000")
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let json = """
-            [
-              {"sync_id": "o1", "title": "T1", "content": "C1", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"},
-              {"sync_id": "o2", "title": "T2", "content": "C2", "project": "all-in-gentle", "tags": [], "created_at": "2026-08-15 10:00:00"},
-              {"sync_id": "o3", "title": "T3", "content": "C3", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"}
-            ]
-            """
+                [
+                  {"sync_id": "o1", "title": "T1", "content": "C1", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"},
+                  {"sync_id": "o2", "title": "T2", "content": "C2", "project": "all-in-gentle", "tags": [], "created_at": "2026-08-15 10:00:00"},
+                  {"sync_id": "o3", "title": "T3", "content": "C3", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"}
+                ]
+                """
             return (response, Data(json.utf8))
         }
 

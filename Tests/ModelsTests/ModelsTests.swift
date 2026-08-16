@@ -173,7 +173,9 @@ final class ModelsTests: XCTestCase {
         assertSendable(MemoryObservation(id: "m1", title: "T", content: "C", createdAt: wholeSeconds(Date())))
         assertSendable(ServiceStatus(id: "s1", name: "svc", isRunning: true))
         assertSendable(TokenUsage(id: "t1", project: "p1", promptTokens: 1, completionTokens: 2, estimatedCost: 0.0))
-        assertSendable(SessionSummary(id: "ss1", project: "p1", sessionName: "S", messageCount: 1, totalTokens: 2, estimatedCost: 0.0))
+        assertSendable(
+            SessionSummary(
+                id: "ss1", project: "p1", sessionName: "S", messageCount: 1, totalTokens: 2, estimatedCost: 0.0))
         assertSendable(ChatMessage(id: "c1", role: .user, content: "hi"))
         assertSendable(InteractionState.live)
         assertSendable(AllInGentleError.sourceUnavailable("gate"))

@@ -10,7 +10,7 @@ final class WikiViewModelTests: XCTestCase {
         let docs = [
             OpenSpecScanner.Document(id: "\(projectPath)/spec.md", path: "\(projectPath)/spec.md", title: "Spec"),
             OpenSpecScanner.Document(id: "\(projectPath)/readme.md", path: "\(projectPath)/readme.md", title: "Readme"),
-            OpenSpecScanner.Document(id: "/other/project.md", path: "/other/project.md", title: "Other")
+            OpenSpecScanner.Document(id: "/other/project.md", path: "/other/project.md", title: "Other"),
         ]
         let scanner = StubOpenSpecScanning(documents: docs)
         let viewModel = WikiViewModel(
@@ -97,7 +97,7 @@ final class WikiViewModelTests: XCTestCase {
                 [
                     MemoryObservation(id: "a", title: "A", content: "", project: "/projects/alpha", tags: []),
                     MemoryObservation(id: "b", title: "B", content: "", project: "/projects/beta", tags: []),
-                    MemoryObservation(id: "c", title: "C", content: "", project: nil, tags: [])
+                    MemoryObservation(id: "c", title: "C", content: "", project: nil, tags: []),
                 ]
             }
         }

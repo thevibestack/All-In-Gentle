@@ -11,7 +11,8 @@ final class LLMServiceTests: XCTestCase {
         }
 
         let text = try String(contentsOf: url, encoding: .utf8)
-        let chunks = try text
+        let chunks =
+            try text
             .components(separatedBy: .newlines)
             .compactMap { line in
                 try DeepSeekSSEParser.parse(line: line)
@@ -62,7 +63,7 @@ final class LLMServiceTests: XCTestCase {
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}",
                 "data: {\"choices\":[{\"delta\":{\"content\":\" world\"},\"finish_reason\":\"stop\"}]}",
-                "data: [DONE]"
+                "data: [DONE]",
             ].joined(separator: "\n")
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -139,7 +140,9 @@ final class LLMServiceTests: XCTestCase {
         ])
         for try await _ in stream {}
 
-        guard let body = capturedRequest.flatMap(requestBody), let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+        guard let body = capturedRequest.flatMap(requestBody),
+            let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+        else {
             XCTFail("Expected JSON request body")
             return
         }
@@ -169,7 +172,7 @@ final class LLMServiceTests: XCTestCase {
         MockURLProtocol.requestHandler = { request in
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hola\"}}]}",
-                "data: {\"choices\":[{\"delta\":{\"content\":\" mundo\"},\"finish_reason\":\"stop\"}]}"
+                "data: {\"choices\":[{\"delta\":{\"content\":\" mundo\"},\"finish_reason\":\"stop\"}]}",
             ].joined(separator: "\n")
             let response = HTTPURLResponse(
                 url: request.url!,

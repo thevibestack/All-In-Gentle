@@ -83,7 +83,7 @@ final class ChatViewModelTests: XCTestCase {
         let service = MockLLMService(chunks: [
             ChatChunk(textDelta: "Hello"),
             ChatChunk(textDelta: " world"),
-            ChatChunk(textDelta: nil, finishReason: "stop")
+            ChatChunk(textDelta: nil, finishReason: "stop"),
         ])
         let viewModel = makeViewModel(service: service)
         viewModel.input = "Hi"
