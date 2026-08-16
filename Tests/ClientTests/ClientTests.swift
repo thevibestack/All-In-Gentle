@@ -354,6 +354,21 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(page.count, 0, "Unparseable time_updated must drop the row in tokenUsagePage too (S7)")
     }
 
+    func testTokenUsagePageBindsCursorIdContainingQuote() async throws {
+        var seed = Self.sessionSeed
+        seed += "INSERT INTO session VALUES ('a','p','t',0.1,10,20,1000);"
+        seed += "INSERT INTO session VALUES ('a''b','p','t',0.1,10,20,1000);"
+        seed += "INSERT INTO session VALUES ('c','p','t',0.1,10,20,1000);"
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let first = try await client.tokenUsagePage(limit: 10)
+        XCTAssertEqual(first.map(\.id), ["c", "a'b", "a"], "id DESC tie-break must survive a quote-in-id (S8)")
+
+        let resumed = try await client.tokenUsagePage(after: TokenCursor(timeUpdated: 1000, id: "a'b"), limit: 10)
+        XCTAssertEqual(resumed.map(\.id), ["a"], "Quote-in-id cursor must resume without a prepare error (S8)")
+    }
+
     func testProcessMonitorCanStartMonitoringSequence() async {
         let runner = CapturingProcessRunner()
         await runner.setNextOutput("")
