@@ -72,19 +72,20 @@ final class EngramClientTests: XCTestCase {
     // MARK: - T1: full payload, numeric id, sync_id optional (R2)
 
     func testSearchDecodesFullPayloadWithNumericIDAndNilSyncID() async throws {
-        stubJSON("""
-        [
-          {
-            "id": 123,
-            "title": "Memory title",
-            "content": "Memory content",
-            "project": "all-in-gentle",
-            "tags": ["decode", "strict"],
-            "created_at": "2026-01-02 03:04:05",
-            "updated_at": "2026-01-03 04:05:06"
-          }
-        ]
-        """)
+        stubJSON(
+            """
+            [
+              {
+                "id": 123,
+                "title": "Memory title",
+                "content": "Memory content",
+                "project": "all-in-gentle",
+                "tags": ["decode", "strict"],
+                "created_at": "2026-01-02 03:04:05",
+                "updated_at": "2026-01-03 04:05:06"
+              }
+            ]
+            """)
 
         let result = try await makeClient().search(query: "hello", limit: 20)
 
@@ -105,12 +106,13 @@ final class EngramClientTests: XCTestCase {
     // MARK: - T2: string id, tags default, idString prefers sync_id (R2, D8)
 
     func testSearchDecodesStringIDDefaultsTagsAndPrefersSyncID() async throws {
-        stubJSON("""
-        [
-          { "id": "abc-1", "title": "No sync", "content": "C" },
-          { "id": "raw-id", "sync_id": "sync-42", "title": "Synced", "content": "C" }
-        ]
-        """)
+        stubJSON(
+            """
+            [
+              { "id": "abc-1", "title": "No sync", "content": "C" },
+              { "id": "raw-id", "sync_id": "sync-42", "title": "Synced", "content": "C" }
+            ]
+            """)
 
         let result = try await makeClient().search(query: "hello", limit: 20)
 
@@ -123,12 +125,13 @@ final class EngramClientTests: XCTestCase {
     // MARK: - T3: malformed items skipped, nothing fabricated (R1/R3)
 
     func testSearchSkipsItemMissingTitleWithoutCrashing() async throws {
-        stubJSON("""
-        [
-          { "id": 1, "content": "No title here" },
-          { "id": 2, "title": "Valid", "content": "C" }
-        ]
-        """)
+        stubJSON(
+            """
+            [
+              { "id": 1, "content": "No title here" },
+              { "id": 2, "title": "Valid", "content": "C" }
+            ]
+            """)
 
         let result = try await makeClient().search(query: "hello", limit: 20)
 
@@ -137,12 +140,13 @@ final class EngramClientTests: XCTestCase {
     }
 
     func testSearchSkipsItemMissingIDWithoutFabricatingUUID() async throws {
-        stubJSON("""
-        [
-          { "title": "No id", "content": "C" },
-          { "id": 7, "title": "Valid", "content": "C" }
-        ]
-        """)
+        stubJSON(
+            """
+            [
+              { "title": "No id", "content": "C" },
+              { "id": 7, "title": "Valid", "content": "C" }
+            ]
+            """)
 
         let result = try await makeClient().search(query: "hello", limit: 20)
 
@@ -151,12 +155,13 @@ final class EngramClientTests: XCTestCase {
     }
 
     func testSearchKeepsCreatedAtNilForUnparseableDate() async throws {
-        stubJSON("""
-        [
-          { "id": 3, "title": "Bad date", "content": "C", "created_at": "not-a-date" },
-          { "id": 4, "title": "Good", "content": "C", "updated_at": "2026-06-07 08:09:10" }
-        ]
-        """)
+        stubJSON(
+            """
+            [
+              { "id": 3, "title": "Bad date", "content": "C", "created_at": "not-a-date" },
+              { "id": 4, "title": "Good", "content": "C", "updated_at": "2026-06-07 08:09:10" }
+            ]
+            """)
 
         let result = try await makeClient().search(query: "hello", limit: 20)
 
@@ -266,13 +271,15 @@ final class EngramClientTests: XCTestCase {
 
     func testProjectsRequestsObservationsWithLimitThousandAndNoQuery() async throws {
         var captured: URLRequest?
-        stubJSON("""
-        [
-          { "id": 1, "title": "A", "content": "C", "project": "alpha" },
-          { "id": 2, "title": "B", "content": "C", "project": "beta" },
-          { "id": 3, "title": "C", "content": "C", "project": "alpha" }
-        ]
-        """) { captured = $0 }
+        stubJSON(
+            """
+            [
+              { "id": 1, "title": "A", "content": "C", "project": "alpha" },
+              { "id": 2, "title": "B", "content": "C", "project": "beta" },
+              { "id": 3, "title": "C", "content": "C", "project": "alpha" }
+            ]
+            """
+        ) { captured = $0 }
 
         let projects = try await makeClient().projects()
 

@@ -156,6 +156,7 @@ final class IntegrationTests: XCTestCase {
             let json = """
                 [
                   {
+                    "id": "obs-1",
                     "sync_id": "obs-1",
                     "title": "Title A",
                     "content": "Body A",
@@ -164,6 +165,7 @@ final class IntegrationTests: XCTestCase {
                     "created_at": "2026-08-15 10:00:00"
                   },
                   {
+                    "id": "obs-2",
                     "sync_id": "obs-2",
                     "title": "Title B",
                     "content": "Body B",
@@ -201,16 +203,16 @@ final class IntegrationTests: XCTestCase {
     func testEngramProjectsDedup() async throws {
         MockURLProtocol.box.set { request in
             guard let url = request.url else { throw URLError(.badURL) }
-            XCTAssertEqual(url.path, "/search")
+            XCTAssertEqual(url.path, "/observations")
             let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-            XCTAssertEqual(queryItems.first(where: { $0.name == "q" })?.value, "")
+            XCTAssertNil(queryItems.first(where: { $0.name == "q" }), "exact match must never issue a q= query")
             XCTAssertEqual(queryItems.first(where: { $0.name == "limit" })?.value, "1000")
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let json = """
                 [
-                  {"sync_id": "o1", "title": "T1", "content": "C1", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"},
-                  {"sync_id": "o2", "title": "T2", "content": "C2", "project": "all-in-gentle", "tags": [], "created_at": "2026-08-15 10:00:00"},
-                  {"sync_id": "o3", "title": "T3", "content": "C3", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"}
+                  {"id": "o1", "sync_id": "o1", "title": "T1", "content": "C1", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"},
+                  {"id": "o2", "sync_id": "o2", "title": "T2", "content": "C2", "project": "all-in-gentle", "tags": [], "created_at": "2026-08-15 10:00:00"},
+                  {"id": "o3", "sync_id": "o3", "title": "T3", "content": "C3", "project": "gentle-ai", "tags": [], "created_at": "2026-08-15 10:00:00"}
                 ]
                 """
             return (response, Data(json.utf8))
@@ -260,7 +262,7 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
-    func testEngramSearchReturnsEmptyForNonArrayBody() async throws {
+    func testEngramSearchThrowsOnNonArrayBody() async throws {
         MockURLProtocol.box.set { request in
             guard let url = request.url else { throw URLError(.badURL) }
             XCTAssertEqual(url.path, "/search")
@@ -268,8 +270,12 @@ final class IntegrationTests: XCTestCase {
             return (response, Data(#"{"a":1}"#.utf8))
         }
 
-        let results = try await makeEngramClient().search(query: "q")
-        XCTAssertTrue(results.isEmpty, "Non-array JSON body must map to an empty result")
+        do {
+            _ = try await makeEngramClient().search(query: "q")
+            XCTFail("Expected strict decoding to reject a non-array body")
+        } catch is DecodingError {
+            // Strict decoding (F4/F5) treats a non-array body as malformed.
+        }
     }
 
     func testEngramSearchDropsMissingTitleOrContentAndDefaultsTags() async throws {
@@ -279,10 +285,10 @@ final class IntegrationTests: XCTestCase {
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let json = """
                 [
-                  {"sync_id": "keep-1", "title": "Kept", "content": "Body A", "tags": ["api"]},
-                  {"sync_id": "drop-1", "title": "No content"},
-                  {"sync_id": "drop-2", "content": "No title"},
-                  {"sync_id": "keep-2", "title": "No tags", "content": "Body B"}
+                  {"id": "keep-1", "sync_id": "keep-1", "title": "Kept", "content": "Body A", "tags": ["api"]},
+                  {"id": "drop-1", "sync_id": "drop-1", "title": "No content"},
+                  {"id": "drop-2", "sync_id": "drop-2", "content": "No title"},
+                  {"id": "keep-2", "sync_id": "keep-2", "title": "No tags", "content": "Body B"}
                 ]
                 """
             return (response, Data(json.utf8))
@@ -313,7 +319,7 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(results[0].id, "42", "id-only row must fall back to String(describing:) of id")
     }
 
-    func testEngramSearchGeneratesUUIDWhenIDAndSyncIDMissing() async throws {
+    func testEngramSearchDropsRowsMissingIDAndSyncID() async throws {
         MockURLProtocol.box.set { request in
             guard let url = request.url else { throw URLError(.badURL) }
             XCTAssertEqual(url.path, "/search")
@@ -328,21 +334,19 @@ final class IntegrationTests: XCTestCase {
         }
 
         let results = try await makeEngramClient().search(query: "q")
-        XCTAssertEqual(results.count, 2)
-        XCTAssertEqual(results[0].id.count, 36, "Fallback id must be a UUID-shaped string")
-        XCTAssertEqual(results[1].id.count, 36)
-        XCTAssertNotEqual(
-            results[0].id, results[1].id, "Fallback ids must not be frozen; each row gets its own UUID")
+        XCTAssertEqual(
+            results.count, 0,
+            "Strict decoding (F4) drops rows without an id; identity is never fabricated")
     }
 
-    func testEngramSearchFallsBackToFiniteDateWhenDatesUnparseable() async throws {
+    func testEngramSearchLeavesDateNilWhenUnparseable() async throws {
         MockURLProtocol.box.set { request in
             guard let url = request.url else { throw URLError(.badURL) }
             XCTAssertEqual(url.path, "/search")
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let json = """
                 [
-                  {"sync_id": "obs-bad-dates", "title": "Bad dates", "content": "Body",
+                  {"id": "obs-bad-dates", "sync_id": "obs-bad-dates", "title": "Bad dates", "content": "Body",
                    "created_at": "not-a-date", "updated_at": "also-not-a-date"}
                 ]
                 """
@@ -351,11 +355,9 @@ final class IntegrationTests: XCTestCase {
 
         let results = try await makeEngramClient().search(query: "q")
         XCTAssertEqual(results.count, 1)
-        let createdAt = results[0].createdAt
-        XCTAssertTrue(
-            createdAt.timeIntervalSinceReferenceDate.isFinite, "Fallback date must be finite")
-        XCTAssertLessThan(
-            abs(createdAt.timeIntervalSinceNow), 60, "Fallback date must be near now, never frozen")
+        XCTAssertNil(
+            results[0].createdAt,
+            "Strict decoding (F4/F5) never fabricates a Date() for unparseable timestamps")
     }
 
     // MARK: - Engram live smoke (opt-in)

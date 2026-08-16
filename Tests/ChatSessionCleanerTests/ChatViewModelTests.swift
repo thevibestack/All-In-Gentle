@@ -267,16 +267,25 @@ final class ChatViewModelTests: XCTestCase {
             .failure(AllInGentleError.sourceUnavailable("network down")),
             .success([
                 ChatChunk(textDelta: "Retried"),
-                ChatChunk(textDelta: nil, finishReason: "stop")
-            ])
+                ChatChunk(textDelta: nil, finishReason: "stop"),
+            ]),
         ])
         let viewModel = makeViewModel(service: service)
         viewModel.input = "Hi"
 
         await viewModel.send()
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
+
         XCTAssertNotNil(viewModel.errorMessage)
 
         await viewModel.retryLastSend()
+        let retryDeadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < retryDeadline {
+            await Task.yield()
+        }
 
         let userMessages = viewModel.messages.filter { $0.role == .user }
         XCTAssertEqual(userMessages.count, 1, "Retry must not duplicate the user message")
@@ -290,8 +299,9 @@ final class ChatViewModelTests: XCTestCase {
         XCTAssertEqual(streamCalls, 2)
         let captured = await service.capturedCalls
         XCTAssertEqual(captured.count, 2)
-        XCTAssertEqual(captured[1].filter { $0.role == .user }.count, 1,
-                       "The retried stream must receive exactly one user message")
+        XCTAssertEqual(
+            captured[1].filter { $0.role == .user }.count, 1,
+            "The retried stream must receive exactly one user message")
 
         let store = ChatSessionStore(directory: tempDirectory)
         let loaded = try await store.loadAll()
@@ -320,8 +330,9 @@ final class ChatViewModelTests: XCTestCase {
         let errorBeforeRetry = viewModel.errorMessage
         await viewModel.retryLastSend()
 
-        XCTAssertEqual(viewModel.errorMessage, errorBeforeRetry,
-                       "A payload-less retry must leave the error banner untouched")
+        XCTAssertEqual(
+            viewModel.errorMessage, errorBeforeRetry,
+            "A payload-less retry must leave the error banner untouched")
         XCTAssertFalse(viewModel.isStreaming)
         XCTAssertTrue(viewModel.messages.isEmpty)
     }
@@ -357,12 +368,17 @@ final class ChatViewModelTests: XCTestCase {
         viewModel.input = "Hello"
 
         await viewModel.send()
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         XCTAssertEqual(viewModel.errorMessage, error.localizedDescription)
         XCTAssertFalse(viewModel.isStreaming)
         XCTAssertTrue(viewModel.messages.contains { $0.role == .user })
-        XCTAssertFalse(viewModel.messages.contains { $0.role == .assistant },
-                       "No empty assistant message may survive a stream error")
+        XCTAssertFalse(
+            viewModel.messages.contains { $0.role == .assistant },
+            "No empty assistant message may survive a stream error")
     }
 
     // R5: when the stream for session A finalizes after the user switched to
@@ -383,6 +399,10 @@ final class ChatViewModelTests: XCTestCase {
         viewModel.selectedSessionID = sessionB.id
         await service.release()
         await sendTask.value
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         let finalA = viewModel.sessions.first { $0.id == sessionA.id }
         XCTAssertEqual(finalA?.messages.count, 2)

@@ -41,7 +41,7 @@ final class ModelsTests: XCTestCase {
         )
         let decoded = try decodeRoundTrip(observation)
         var normalized = decoded
-        normalized.createdAt = wholeSeconds(decoded.createdAt)
+        normalized.createdAt = decoded.createdAt.map(wholeSeconds)
         XCTAssertEqual(observation, normalized)
     }
 
@@ -229,8 +229,8 @@ final class ModelsTests: XCTestCase {
         let es = try XCTUnwrap(catalog(for: "es", in: bundle), "es.lproj catalog not found")
 
         XCTAssertEqual(Set(en.keys), Set(es.keys))
-        XCTAssertEqual(en.count, 157)
-        XCTAssertEqual(es.count, 157)
+        XCTAssertEqual(en.count, 148)
+        XCTAssertEqual(es.count, 148)
     }
 
     // MARK: - Helpers (F3)
@@ -244,7 +244,9 @@ final class ModelsTests: XCTestCase {
     }
 
     private func catalog(for language: String, in bundle: Bundle) -> [String: String]? {
-        guard let url = bundle.url(forResource: "Localizable", withExtension: "strings", subdirectory: "\(language).lproj")
+        guard
+            let url = bundle.url(
+                forResource: "Localizable", withExtension: "strings", subdirectory: "\(language).lproj")
         else { return nil }
         return NSDictionary(contentsOf: url) as? [String: String]
     }

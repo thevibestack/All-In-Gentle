@@ -56,7 +56,10 @@ struct ChatSidebarView: View {
                         ForEach(group.sessions) { session in
                             sessionRow(session: session)
                                 .tag(session.id)
-                                .listRowInsets(EdgeInsets(top: AGSpacing.xxSmall, leading: AGSpacing.small, bottom: AGSpacing.xxSmall, trailing: AGSpacing.small))
+                                .listRowInsets(
+                                    EdgeInsets(
+                                        top: AGSpacing.xxSmall, leading: AGSpacing.small, bottom: AGSpacing.xxSmall,
+                                        trailing: AGSpacing.small))
                         }
                     } header: {
                         sectionHeader(title: group.key)

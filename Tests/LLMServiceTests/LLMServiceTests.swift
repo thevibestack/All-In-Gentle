@@ -224,7 +224,7 @@ final class LLMServiceTests: XCTestCase {
         XCTAssertFalse(viewModel.isStreaming)
     }
 
-        func testDeepSeekProviderSurfacesKeychainError() async throws {
+    func testDeepSeekProviderSurfacesKeychainError() async throws {
         let config = LLMProviderConfiguration.deepseekDefault(id: "test")
         let keychain = MockKeychain()
         await keychain.setFailNextLoad()
@@ -248,7 +248,7 @@ final class LLMServiceTests: XCTestCase {
         }
     }
 
-// MARK: - Helpers
+    // MARK: - Helpers
 
     private func makeMockURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral

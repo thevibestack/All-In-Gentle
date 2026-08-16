@@ -22,8 +22,10 @@ private final class SendableBox<T>: @unchecked Sendable {
 public struct ProcessRunner: ProcessRunning {
     public init() {}
 
-    public func run(executable: URL, arguments: [String],
-                    timeout: Duration = .seconds(30)) async throws -> String {
+    public func run(
+        executable: URL, arguments: [String],
+        timeout: Duration = .seconds(30)
+    ) async throws -> String {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
@@ -99,12 +101,12 @@ public struct ProcessRunner: ProcessRunning {
         try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
                 await waitForExit(process)
-                return false // exited
+                return false  // exited
             }
             group.addTask {
                 // ContinuousClock: immune to wall-clock changes.
                 try await Task.sleep(for: timeout)
-                return true // timed out
+                return true  // timed out
             }
             guard let timedOut = try await group.next() else { return false }
             group.cancelAll()

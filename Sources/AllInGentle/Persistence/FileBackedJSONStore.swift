@@ -77,7 +77,8 @@ public actor FileBackedJSONStore<Item: Codable & Identifiable & Sendable> where 
         var items: [Item] = []
         for url in urls {
             if let data = fileManager.contents(atPath: url.path),
-               let item = try? decoder.decode(Item.self, from: data) {
+                let item = try? decoder.decode(Item.self, from: data)
+            {
                 items.append(item)
             }
         }

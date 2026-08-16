@@ -25,10 +25,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(config?.model, "deepseek-chat")
         XCTAssertEqual(config?.apiKeyReference, "all-in-gentle.provider.deepseek.api-key")
 
-        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = try? await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertEqual(migratedKey, "sk-legacy")
 
-        let legacyKeyStillPresent = await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
+        let legacyKeyStillPresent = try? await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
         XCTAssertEqual(legacyKeyStillPresent, "sk-legacy")
     }
 
@@ -57,7 +57,7 @@ final class SettingsTests: XCTestCase {
 
         XCTAssertEqual(store.llmProviderConfiguration?.displayName, "Custom")
 
-        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = try? await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertNil(migratedKey)
     }
 
@@ -105,7 +105,7 @@ final class SettingsTests: XCTestCase {
             capturedRequest = request
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"},\"finish_reason\":\"stop\"}]}",
-                "data: [DONE]"
+                "data: [DONE]",
             ].joined(separator: "\n")
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -134,7 +134,8 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer sk-draft")
 
         guard let body = requestBody(from: request),
-              let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+            let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+        else {
             XCTFail("Expected a JSON request body")
             return
         }
@@ -147,7 +148,7 @@ final class SettingsTests: XCTestCase {
         }
         XCTAssertEqual(messages[0], ["role": "user", "content": "ping"])
 
-        let restoredKey = await keychain.load(key: config.apiKeyAccount)
+        let restoredKey = try? await keychain.load(key: config.apiKeyAccount)
         XCTAssertEqual(restoredKey, "sk-old")
     }
 
@@ -174,7 +175,7 @@ final class SettingsTests: XCTestCase {
         )
 
         XCTAssertEqual(result, .failure(L("settings.ai.test.failure")))
-        let restoredKey = await keychain.load(key: config.apiKeyAccount)
+        let restoredKey = try? await keychain.load(key: config.apiKeyAccount)
         XCTAssertEqual(restoredKey, "sk-old")
     }
 
@@ -201,7 +202,7 @@ final class SettingsTests: XCTestCase {
         )
 
         XCTAssertEqual(result, .success(L("settings.ai.test.success")))
-        let remainingKey = await keychain.load(key: config.apiKeyAccount)
+        let remainingKey = try? await keychain.load(key: config.apiKeyAccount)
         XCTAssertNil(remainingKey)
     }
 
@@ -265,30 +266,4 @@ final class SettingsTests: XCTestCase {
         stream.close()
         return data as Data
     }
-}
-
-private final class MockURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        guard let handler = Self.requestHandler else {
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
-        do {
-            let (response, data) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
-}
-
 }

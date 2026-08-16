@@ -75,7 +75,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
             func search(query: String, limit: Int) async throws -> [MemoryObservation] {
                 [
                     MemoryObservation(id: "a", title: "A", content: "", project: "alpha", tags: []),
-                    MemoryObservation(id: "b", title: "B", content: "", project: "/projects/beta", tags: [])
+                    MemoryObservation(id: "b", title: "B", content: "", project: "/projects/beta", tags: []),
                 ]
             }
         }
