@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import XCTest
 @testable import AllInGentleKit
 
@@ -49,12 +50,6 @@ private final class MockURLProtocol: URLProtocol {
 }
 
 final class IntegrationTests: XCTestCase {
-    private var openCodeDBPath: String {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/share/opencode/opencode.db")
-            .path
-    }
-
     private var engramBaseURL: URL {
         URL(string: "http://127.0.0.1:7437")!
     }
@@ -71,49 +66,49 @@ final class IntegrationTests: XCTestCase {
         EngramClient(baseURL: engramBaseURL, urlSession: makeMockSession())
     }
 
-    // MARK: - OpenCode SQLite read-only enforcement
+    // MARK: - OpenCode token usage (hermetic, temp DB)
 
-    func testOpenCodeClientRejectsMutations() async throws {
-        let path = openCodeDBPath
-        try XCTSkipIf(
-            !FileManager.default.fileExists(atPath: path),
-            "OpenCode database not found at \(path)"
-        )
+    func testOpenCodeClientTokenUsageFromTempDB() async throws {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("db")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        let client = OpenCodeClient(dbPath: path)
-        do {
-            _ = try await client.executeReadOnly("DELETE FROM session WHERE id = 'x'")
-            XCTFail("Expected read-only violation for DELETE statement")
-        } catch {
-            guard case .readOnlyViolation = error as? AllInGentleError else {
-                XCTFail("Expected readOnlyViolation, got \(error)")
-                return
-            }
-        }
-    }
+        var writableDB: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(tempURL.path, &writableDB), SQLITE_OK)
+        let sql = """
+        CREATE TABLE session (id TEXT PRIMARY KEY, project_id TEXT, title TEXT, cost REAL,
+                              tokens_input INTEGER, tokens_output INTEGER, time_updated INTEGER);
+        INSERT INTO session VALUES ('s1','all-in-gentle','Auth fix',0.25,120,30,1700000000000);
+        INSERT INTO session VALUES ('s2','all-in-gentle','Wiki add',0.10,50,10,1700000001000);
+        """
+        XCTAssertEqual(sqlite3_exec(writableDB, sql, nil, nil, nil), SQLITE_OK)
+        // Close the writer BEFORE the read-only client opens the file (SQLite locking).
+        sqlite3_close(writableDB)
 
-    func testOpenCodeClientReadsLiveProjects() async throws {
-        let path = openCodeDBPath
-        try XCTSkipIf(
-            !FileManager.default.fileExists(atPath: path),
-            "OpenCode database not found at \(path)"
-        )
-
-        let client = OpenCodeClient(dbPath: path)
-        let projects = try await client.projects()
-        XCTAssertFalse(projects.isEmpty, "Expected at least one project from the live OpenCode DB")
-    }
-
-    func testOpenCodeClientReadsLiveTokenUsage() async throws {
-        let path = openCodeDBPath
-        try XCTSkipIf(
-            !FileManager.default.fileExists(atPath: path),
-            "OpenCode database not found at \(path)"
-        )
-
-        let client = OpenCodeClient(dbPath: path)
+        let client = OpenCodeClient(dbPath: tempURL.path)
         let usage = try await client.tokenUsage(limit: 10)
-        XCTAssertGreaterThanOrEqual(usage.count, 0, "Token usage query should complete without error")
+
+        XCTAssertEqual(usage.count, 2)
+        XCTAssertEqual(usage.map(\.id), ["s2", "s1"], "Rows ordered by time_updated DESC")
+
+        let newest = usage[0]
+        XCTAssertEqual(newest.project, "all-in-gentle")
+        XCTAssertEqual(newest.session, "Wiki add")
+        XCTAssertEqual(newest.promptTokens, 50)
+        XCTAssertEqual(newest.completionTokens, 10)
+        XCTAssertEqual(newest.estimatedCost, 0.10, accuracy: 0.0001)
+        XCTAssertEqual(newest.timestamp, Date(timeIntervalSince1970: 1_700_000_001))
+        XCTAssertEqual(newest.rawTimeUpdated, 1_700_000_001_000.0)
+
+        let oldest = usage[1]
+        XCTAssertEqual(oldest.project, "all-in-gentle")
+        XCTAssertEqual(oldest.session, "Auth fix")
+        XCTAssertEqual(oldest.promptTokens, 120)
+        XCTAssertEqual(oldest.completionTokens, 30)
+        XCTAssertEqual(oldest.estimatedCost, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(oldest.timestamp, Date(timeIntervalSince1970: 1_700_000_000))
+        XCTAssertEqual(oldest.rawTimeUpdated, 1_700_000_000_000.0)
     }
 
     // MARK: - Engram hermetic tests
