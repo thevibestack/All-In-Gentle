@@ -8,17 +8,6 @@ struct TokensView: View {
         NavigationStack {
             content
                 .navigationTitle(L("tokens.title"))
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        HStack(spacing: AGSpacing.xSmall) {
-                            AGButton(
-                                "tokens.export", systemImage: "square.and.arrow.up", variant: .secondary, action: {}
-                            )
-                            .disabled(true)
-                            AGStatusBadge(status: .placeholder)
-                        }
-                    }
-                }
                 .task { await viewModel.load() }
                 .onChange(of: appState.globalSearchQuery) { _, new in
                     viewModel.searchQuery = new

@@ -8,17 +8,6 @@ struct ServicesView: View {
         NavigationStack {
             content
                 .navigationTitle(L("services.title"))
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        HStack(spacing: AGSpacing.xSmall) {
-                            AGButton(
-                                "services.safeRestart", systemImage: "arrow.clockwise", variant: .secondary, action: {}
-                            )
-                            .disabled(true)
-                            AGStatusBadge(status: .placeholder)
-                        }
-                    }
-                }
                 .task { await viewModel.poll() }
                 .onChange(of: appState.globalSearchQuery) { _, new in
                     viewModel.searchQuery = new

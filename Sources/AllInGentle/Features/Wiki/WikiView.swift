@@ -11,15 +11,6 @@ struct WikiView: View {
             detailPane
         }
         .navigationTitle(L("wiki.title"))
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: AGSpacing.xSmall) {
-                    AGButton("wiki.previewActions", systemImage: "ellipsis.circle", variant: .secondary, action: {})
-                        .disabled(true)
-                    AGStatusBadge(status: .placeholder)
-                }
-            }
-        }
         .task {
             viewModel.selectedProjectPath = appState.selectedProjectPath
             viewModel.loadDocuments(forProjectPath: appState.selectedProjectPath)

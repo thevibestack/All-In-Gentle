@@ -14,15 +14,6 @@ struct ProjectsView: View {
             detailContent
         }
         .navigationTitle(L("projects.title"))
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: AGSpacing.xSmall) {
-                    AGButton("projects.addProject", systemImage: "plus", variant: .secondary, action: {})
-                        .disabled(true)
-                    AGStatusBadge(status: .placeholder)
-                }
-            }
-        }
         .task {
             viewModel.onSelectionChange = { appState.selectedProjectPath = $0 }
             await viewModel.load(initialSelectedPath: appState.selectedProjectPath)

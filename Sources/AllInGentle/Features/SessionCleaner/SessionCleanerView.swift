@@ -8,15 +8,6 @@ struct SessionCleanerView: View {
         NavigationStack {
             content
                 .navigationTitle(L("sessionCleaner.title"))
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        HStack(spacing: AGSpacing.xSmall) {
-                            AGButton("sessionCleaner.cleanUp", systemImage: "trash", variant: .danger, action: {})
-                                .disabled(true)
-                            AGStatusBadge(status: .placeholder)
-                        }
-                    }
-                }
                 .task { await viewModel.load() }
                 .onChange(of: appState.globalSearchQuery) { _, new in
                     viewModel.searchQuery = new
