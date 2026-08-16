@@ -1,51 +1,13 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 struct StubProjectSourceProvider: ProjectSourceProvider {
     var projects: [Project] = []
 
     func projects() async throws -> [Project] {
         projects
-    }
-}
-
-final class StubEngramSearchProvider: EngramSearchProvider, @unchecked Sendable {
-    var results: [MemoryObservation] = []
-    var observationsResults: [MemoryObservation] = []
-    var lastQuery: String?
-    var lastProject: String?
-    var lastObservationsProject: String?
-    var lastObservationsLimit: Int?
-
-    func search(query: String, limit: Int) async throws -> [MemoryObservation] {
-        lastQuery = query
-        return results
-    }
-
-    func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
-        lastQuery = query
-        lastProject = project
-        return results
-    }
-
-    func observations(project: String, limit: Int) async throws -> [MemoryObservation] {
-        lastObservationsProject = project
-        lastObservationsLimit = limit
-        return observationsResults
-    }
-}
-
-struct StubOpenSpecScanning: OpenSpecScanning {
-    var documents: [OpenSpecScanner.Document] = []
-    var preview: String = ""
-
-    func scan(root: String) async throws -> [OpenSpecScanner.Document] {
-        documents
-    }
-
-    func preview(at path: String) async throws -> String {
-        preview
     }
 }
 
@@ -67,7 +29,7 @@ final class ProjectsWikiTests: XCTestCase {
         )
         let providers: [any ProjectSourceProvider] = [
             StubProjectSourceProvider(projects: [openCode]),
-            StubProjectSourceProvider(projects: [codeGraph])
+            StubProjectSourceProvider(projects: [codeGraph]),
         ]
         let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()
@@ -94,7 +56,7 @@ final class ProjectsWikiTests: XCTestCase {
         )
         let providers: [any ProjectSourceProvider] = [
             StubProjectSourceProvider(projects: [openCode]),
-            StubProjectSourceProvider(projects: [codeGraph])
+            StubProjectSourceProvider(projects: [codeGraph]),
         ]
         let viewModel = ProjectsViewModel(providers: providers, store: StubProjectStoring())
         await viewModel.load()
@@ -127,11 +89,10 @@ final class ProjectsWikiTests: XCTestCase {
             id: "m1",
             title: "Found",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let scanner = StubOpenSpecScanning()
         let viewModel = WikiViewModel(
             engram: engram,
@@ -143,13 +104,46 @@ final class ProjectsWikiTests: XCTestCase {
         XCTAssertEqual(viewModel.results.count, 0)
         XCTAssertTrue(viewModel.isSearching)
 
-        try await Task.sleep(for: .milliseconds(150))
-        XCTAssertEqual(viewModel.results.count, 0)
-
-        try await Task.sleep(for: .milliseconds(250))
+        // Default 300ms debounce: poll until the debounced search lands.
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.title, "Found")
-        XCTAssertEqual(engram.lastProject, "/projects/p1")
+        let lastProject = await engram.lastProject
+        XCTAssertEqual(lastProject, "/projects/p1")
+        XCTAssertFalse(viewModel.isSearching)
+    }
+
+    func testWikiViewModelInjectedDebounceShowsMidDebounceState() async throws {
+        let observation = MemoryObservation(
+            id: "m1",
+            title: "Found",
+            content: "Content",
+            project: "/projects/p1",
+            tags: []
+        )
+        let engram = EngramSearchProviderStub(results: [observation])
+        let scanner = StubOpenSpecScanning()
+        let viewModel = WikiViewModel(
+            engram: engram,
+            scanner: scanner,
+            searchDebounce: .milliseconds(100)
+        )
+        viewModel.selectedProjectPath = "/projects/p1"
+
+        viewModel.searchQuery = "hello"
+
+        // Mid-debounce: query submitted but results not filled yet.
+        XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertTrue(viewModel.isSearching)
+
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
+        XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertFalse(viewModel.isSearching)
     }
 
@@ -164,18 +158,24 @@ final class ProjectsWikiTests: XCTestCase {
             preview: "# OpenSpec Preview"
         )
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
 
         viewModel.loadDocuments(forProjectPath: "/tmp")
-        try await Task.sleep(for: .milliseconds(50))
+        let loaded = await waitUntil {
+            viewModel.documents.count == 1
+        }
+        XCTAssertTrue(loaded)
         XCTAssertEqual(viewModel.documents.count, 1)
 
         viewModel.selectDocument(document)
         XCTAssertEqual(viewModel.selectedDocument, document)
 
-        try await Task.sleep(for: .milliseconds(50))
+        let previewLoaded = await waitUntil {
+            viewModel.previewText == "# OpenSpec Preview"
+        }
+        XCTAssertTrue(previewLoaded)
         XCTAssertEqual(viewModel.previewText, "# OpenSpec Preview")
     }
 }

@@ -72,7 +72,8 @@ public actor DeepSeekProvider: LLMService {
                 do {
                     let (bytes, response) = try await session.bytes(for: request)
                     guard let http = response as? HTTPURLResponse else {
-                        continuation.finish(throwing: AllInGentleError.sourceUnavailable("DeepSeek returned a non-HTTP response"))
+                        continuation.finish(
+                            throwing: AllInGentleError.sourceUnavailable("DeepSeek returned a non-HTTP response"))
                         return
                     }
                     guard (200...299).contains(http.statusCode) else {

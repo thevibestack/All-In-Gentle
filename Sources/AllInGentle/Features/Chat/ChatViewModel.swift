@@ -28,9 +28,9 @@ public final class ChatViewModel {
         if searchQuery.isEmpty { return sessions }
         return sessions.filter { session in
             session.displayTitle.localizedCaseInsensitiveContains(searchQuery)
-            || session.messages.contains {
-                $0.role == .user && $0.content.localizedCaseInsensitiveContains(searchQuery)
-            }
+                || session.messages.contains {
+                    $0.role == .user && $0.content.localizedCaseInsensitiveContains(searchQuery)
+                }
         }
     }
 
@@ -51,7 +51,7 @@ public final class ChatViewModel {
             L("chat.sidebar.today"),
             L("chat.sidebar.yesterday"),
             L("chat.sidebar.previous7Days"),
-            L("chat.sidebar.older")
+            L("chat.sidebar.older"),
         ]
         var groups: [String: [ChatSession]] = Dictionary(uniqueKeysWithValues: keys.map { ($0, []) })
 
@@ -62,7 +62,8 @@ public final class ChatViewModel {
             } else if calendar.isDateInYesterday(session.updatedAt) {
                 key = keys[1]
             } else if let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now),
-                      session.updatedAt >= calendar.startOfDay(for: sevenDaysAgo) {
+                session.updatedAt >= calendar.startOfDay(for: sevenDaysAgo)
+            {
                 key = keys[2]
             } else {
                 key = keys[3]
@@ -84,8 +85,8 @@ public final class ChatViewModel {
     /// Whether the current input can be submitted.
     public var canSend: Bool {
         !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && !isStreaming
-        && providerAvailable
+            && !isStreaming
+            && providerAvailable
     }
 
     /// The currently selected session, if any.
@@ -245,7 +246,8 @@ public final class ChatViewModel {
             return
         }
         guard let session = selectedSession,
-              session.messages.last(where: { $0.role == .user }) != nil else { return }
+            session.messages.last(where: { $0.role == .user }) != nil
+        else { return }
         errorMessage = nil
         isStreaming = true
         await streamResponse(for: session)
@@ -302,7 +304,12 @@ public final class ChatViewModel {
         var assistantMessage: ChatMessage?
         var responseText = ""
 
-        generationTask = Task {
+        generationTask = Task { [weak self] in
+            // Weak capture only: a top-level `guard let self` would re-retain
+            // the view model for the whole task and keep it alive while the
+            // stream hangs. Copy the dependency out, then access `self`
+            // per-call so the task holds the view model only momentarily.
+            guard let service = self?.service else { return }
             do {
                 let stream = try await service.stream(messages: session.messages)
                 for try await chunk in stream {
@@ -316,12 +323,12 @@ public final class ChatViewModel {
                                 content: responseText
                             )
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: sessionID, message: message)
+                                self?.appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         } else {
                             assistantMessage?.content = responseText
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: sessionID, message: message)
+                                self?.appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         }
                     }
@@ -329,20 +336,23 @@ public final class ChatViewModel {
                         break
                     }
                 }
-                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
+                await self?.finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch is CancellationError {
-                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
+                await self?.finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch {
-                await removeEmptyAssistantMessage(sessionID: sessionID, assistantMessage: assistantMessage)
-                await MainActor.run { self.errorMessage = error.localizedDescription }
+                await self?.removeEmptyAssistantMessage(sessionID: sessionID, assistantMessage: assistantMessage)
+                await MainActor.run { self?.errorMessage = error.localizedDescription }
             }
             await MainActor.run {
-                self.isStreaming = false
-                self.generationTask = nil
+                self?.isStreaming = false
+                self?.generationTask = nil
             }
         }
 
-        await generationTask?.value
+        // Deliberately not awaited: an async method's frame retains `self` for
+        // the whole call, so `await generationTask?.value` would keep the view
+        // model alive while the stream is in flight, defeating the weak-capture
+        // contract above. Callers observe completion via `isStreaming`.
     }
 
     // MARK: - Private helpers

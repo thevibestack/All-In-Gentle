@@ -8,15 +8,6 @@ struct SessionCleanerView: View {
         NavigationStack {
             content
                 .navigationTitle(L("sessionCleaner.title"))
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        HStack(spacing: AGSpacing.xSmall) {
-                            AGButton("sessionCleaner.cleanUp", systemImage: "trash", variant: .danger, action: {})
-                                .disabled(true)
-                            AGStatusBadge(status: .placeholder)
-                        }
-                    }
-                }
                 .task { await viewModel.load() }
                 .onChange(of: appState.globalSearchQuery) { _, new in
                     viewModel.searchQuery = new
@@ -68,9 +59,11 @@ private struct SessionGroupRow: View {
             }
 
             HStack(spacing: AGSpacing.large) {
-                LabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
-                LabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
-                LabeledValue(label: L("sessionCleaner.latest"), value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
+                AGLabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
+                AGLabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
+                AGLabeledValue(
+                    label: L("sessionCleaner.latest"),
+                    value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
             }
 
             if !group.sessions.isEmpty {
@@ -101,23 +94,6 @@ private struct SessionGroupRow: View {
                 .font(AGTypography.caption)
                 .foregroundStyle(AGColors.textSecondary)
             }
-        }
-    }
-}
-
-private struct LabeledValue: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
-            Text(label)
-                .font(AGTypography.caption)
-                .foregroundStyle(AGColors.textSecondary)
-            Text(value)
-                .font(AGTypography.body)
-                .foregroundStyle(AGColors.textPrimary)
-                .monospacedDigit()
         }
     }
 }

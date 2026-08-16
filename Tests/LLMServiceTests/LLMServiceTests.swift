@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class LLMServiceTests: XCTestCase {
@@ -11,7 +12,8 @@ final class LLMServiceTests: XCTestCase {
         }
 
         let text = try String(contentsOf: url, encoding: .utf8)
-        let chunks = try text
+        let chunks =
+            try text
             .components(separatedBy: .newlines)
             .compactMap { line in
                 try DeepSeekSSEParser.parse(line: line)
@@ -58,11 +60,11 @@ final class LLMServiceTests: XCTestCase {
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}",
                 "data: {\"choices\":[{\"delta\":{\"content\":\" world\"},\"finish_reason\":\"stop\"}]}",
-                "data: [DONE]"
+                "data: [DONE]",
             ].joined(separator: "\n")
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -117,7 +119,7 @@ final class LLMServiceTests: XCTestCase {
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
         var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             capturedRequest = request
             let body = "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n"
             let response = HTTPURLResponse(
@@ -139,7 +141,9 @@ final class LLMServiceTests: XCTestCase {
         ])
         for try await _ in stream {}
 
-        guard let body = capturedRequest.flatMap(requestBody), let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+        guard let body = capturedRequest.flatMap(requestBody),
+            let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+        else {
             XCTFail("Expected JSON request body")
             return
         }
@@ -166,10 +170,10 @@ final class LLMServiceTests: XCTestCase {
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-test")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hola\"}}]}",
-                "data: {\"choices\":[{\"delta\":{\"content\":\" mundo\"},\"finish_reason\":\"stop\"}]}"
+                "data: {\"choices\":[{\"delta\":{\"content\":\" mundo\"},\"finish_reason\":\"stop\"}]}",
             ].joined(separator: "\n")
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -189,6 +193,13 @@ final class LLMServiceTests: XCTestCase {
         viewModel.input = "Hi"
 
         await viewModel.send()
+
+        // send() returns once the generation task is created; wait for the
+        // stream to complete before asserting its effects.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         XCTAssertEqual(viewModel.messages.count, 2)
         XCTAssertEqual(viewModel.messages[0].role, .user)
@@ -239,10 +250,6 @@ final class LLMServiceTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func makeEphemeralDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "llm-service-tests-\(UUID().uuidString)")!
-    }
-
     private func makeMockURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -267,62 +274,4 @@ final class LLMServiceTests: XCTestCase {
         stream.close()
         return data as Data
     }
-}
-
-private actor MockKeychain: KeychainStoring {
-    private var storage: [String: String] = [:]
-    private var failNextSave = false
-    private var failNextLoad = false
-
-    func setFailNextSave() {
-        failNextSave = true
-    }
-
-    func setFailNextLoad() {
-        failNextLoad = true
-    }
-
-    func save(key: String, value: String) throws {
-        if failNextSave {
-            failNextSave = false
-            throw AllInGentleError.persistenceFailure("Mock keychain save failure")
-        }
-        storage[key] = value
-    }
-
-    func load(key: String) throws -> String? {
-        if failNextLoad {
-            failNextLoad = false
-            throw AllInGentleError.persistenceFailure("Mock keychain load failure")
-        }
-        return storage[key]
-    }
-
-    func delete(key: String) throws {
-        storage[key] = nil
-    }
-}
-
-private final class MockURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        guard let handler = Self.requestHandler else {
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
-        do {
-            let (response, data) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
 }

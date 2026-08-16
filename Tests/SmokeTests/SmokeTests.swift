@@ -2,40 +2,24 @@ import Foundation
 import SwiftUI
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class SmokeTests: XCTestCase {
-    // MARK: - Interaction-state badges
-
-    func testInteractionStateCatalogKeys() {
-        XCTAssertEqual(InteractionState.live.catalogKey, "badge.live")
-        XCTAssertEqual(InteractionState.placeholder.catalogKey, "badge.placeholder")
-        XCTAssertEqual(InteractionState.disabled.catalogKey, "badge.disabled")
-    }
-
-    func testInteractionStateBadgeLabels() {
-        XCTAssertEqual(InteractionState.live.label, L(InteractionState.live.catalogKey))
-        XCTAssertEqual(InteractionState.placeholder.label, L(InteractionState.placeholder.catalogKey))
-        XCTAssertEqual(InteractionState.disabled.label, L(InteractionState.disabled.catalogKey))
-    }
-
-    func testPlaceholderBadgeCanBeConstructed() {
-        let badge = InteractionStateBadge(state: .placeholder)
-        XCTAssertNotNil(badge)
-    }
-
     // MARK: - Sidebar destinations
 
     func testAllSixSidebarItemsAreDefined() {
         let items = AppState.AppTab.allCases
-        XCTAssertEqual(items.map(\.rawValue), [
-            "projects",
-            "wiki",
-            "services",
-            "tokens",
-            "chat",
-            "sessionCleaner"
-        ])
+        XCTAssertEqual(
+            items.map(\.rawValue),
+            [
+                "projects",
+                "wiki",
+                "services",
+                "tokens",
+                "chat",
+                "sessionCleaner",
+            ])
     }
 
     func testSidebarItemLabelsAreLocalized() {
@@ -114,11 +98,5 @@ final class SmokeTests: XCTestCase {
         let store = PreferencesStore(defaults: makeEphemeralDefaults())
         store.set(true, for: .onboardingDismissed)
         XCTAssertTrue(store.bool(for: .onboardingDismissed))
-    }
-
-    // MARK: - Helpers
-
-    private func makeEphemeralDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "smoke-tests-\(UUID().uuidString)")!
     }
 }

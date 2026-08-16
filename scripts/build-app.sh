@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Env-overridable build configuration (defaults for local/ad-hoc use)
+VERSION="${ALL_IN_GENTLE_VERSION:-1.0.0}"
+BUILD_NUMBER="${ALL_IN_GENTLE_BUILD_NUMBER:-1}"
+BUNDLE_ID="${ALL_IN_GENTLE_BUNDLE_ID:-com.allin.gentle}"
+SIGN_IDENTITY="${ALL_IN_GENTLE_SIGN_IDENTITY:--}"
+SKIP_SIGN="${ALL_IN_GENTLE_SKIP_SIGN:-0}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/.build"
 APP_NAME="All-In-Gentle"
-BUNDLE_ID="com.allin.gentle"
 EXECUTABLE_NAME="AllInGentle"
+
+# Resolve the package root regardless of invocation cwd (SPM needs the package dir)
+cd "${PROJECT_DIR}"
+
+# Gate: the suite must stay green before packaging a release
+echo "🧪 Running tests..."
+swift test
 
 # Build the release executable
 echo "🛠️  Building release executable..."
@@ -57,9 +70,9 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${BUILD_NUMBER}</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
     <key>NSHighResolutionCapable</key>
@@ -71,9 +84,13 @@ EOF
 # Write PkgInfo
 echo -n "APPL????" > "${CONTENTS_DIR}/PkgInfo"
 
-# Ad-hoc sign the bundle
-echo "🔏 Ad-hoc signing ${APP_NAME}.app..."
-codesign --force --deep --sign - "${APP_BUNDLE}" 2>/dev/null || true
+# Sign the bundle — loud: failures are fatal under set -e
+if [ "${SKIP_SIGN}" = "1" ]; then
+    echo "⚠️  Skipping code signing (ALL_IN_GENTLE_SKIP_SIGN=1)"
+else
+    echo "🔏 Signing ${APP_NAME}.app with identity '${SIGN_IDENTITY}'..."
+    codesign --force --sign "${SIGN_IDENTITY}" "${APP_BUNDLE}"
+fi
 
 echo "✅ ${APP_NAME}.app ready at:"
 echo "   ${APP_BUNDLE}"

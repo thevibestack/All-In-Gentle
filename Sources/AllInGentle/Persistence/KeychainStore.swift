@@ -9,6 +9,37 @@ public protocol KeychainStoring: Actor {
     func delete(key: String) throws
 }
 
+/// Builds the SecItem query used by `KeychainStore.save(key:value:)`.
+///
+/// Internal pure function so tests can pin the exact query without touching
+/// the live keychain (R-G4).
+func saveQuery(key: String, value: Data) -> [String: Any] {
+    [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key,
+        kSecValueData as String: value,
+        kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+    ]
+}
+
+/// Builds the SecItem query used by `KeychainStore.load(key:)`.
+func loadQuery(key: String) -> [String: Any] {
+    [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key,
+        kSecReturnData as String: true,
+        kSecMatchLimit as String: kSecMatchLimitOne,
+    ]
+}
+
+/// Builds the SecItem query used by `KeychainStore.delete(key:)`.
+func deleteQuery(key: String) -> [String: Any] {
+    [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: key,
+    ]
+}
+
 /// Keychain-backed credential store with an atomic upsert.
 ///
 /// `save` updates an existing item and only falls back to adding a new one
@@ -40,18 +71,22 @@ public actor KeychainStore: KeychainStoring {
             throw AllInGentleError.invalidConfiguration("Unable to encode keychain value")
         }
 
-        let query = baseQuery(key: key)
-        let attributes: [String: Any] = [
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
-        ]
+        var query = saveQuery(key: key, value: data)
+        if let service {
+            query[kSecAttrService as String] = service
+        }
 
-        let updateStatus = secItem.update(query, attributesToUpdate: attributes)
+        let updateStatus = secItem.update(
+            query,
+            attributesToUpdate: [
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            ]
+        )
         if updateStatus == errSecItemNotFound {
             var addQuery = query
-            for (attributeKey, attributeValue) in attributes {
-                addQuery[attributeKey] = attributeValue
-            }
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
             let addStatus = secItem.add(addQuery)
             guard addStatus == errSecSuccess else {
                 throw AllInGentleError.invalidConfiguration("Keychain save failed: \(addStatus)")
@@ -65,9 +100,10 @@ public actor KeychainStore: KeychainStoring {
     }
 
     public func load(key: String) throws -> String? {
-        var query = baseQuery(key: key)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var query = loadQuery(key: key)
+        if let service {
+            query[kSecAttrService as String] = service
+        }
 
         var result: AnyObject?
         let status = secItem.copyMatching(query, result: &result)
@@ -80,20 +116,13 @@ public actor KeychainStore: KeychainStoring {
     }
 
     public func delete(key: String) throws {
-        let status = secItem.delete(baseQuery(key: key))
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw AllInGentleError.persistenceFailure("Keychain delete failed: \(status)")
-        }
-    }
-
-    private func baseQuery(key: String) -> [String: Any] {
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
-        ]
+        var query = deleteQuery(key: key)
         if let service {
             query[kSecAttrService as String] = service
         }
-        return query
+        let status = secItem.delete(query)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw AllInGentleError.persistenceFailure("Keychain delete failed: \(status)")
+        }
     }
 }

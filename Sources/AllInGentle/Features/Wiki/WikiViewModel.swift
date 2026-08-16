@@ -56,16 +56,19 @@ public final class WikiViewModel {
 
     private let engram: any EngramSearchProvider
     private let scanner: any OpenSpecScanning
+    private let searchDebounce: Duration
     private var searchTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var previewTask: Task<Void, Never>?
 
     public init(
         engram: any EngramSearchProvider,
-        scanner: any OpenSpecScanning
+        scanner: any OpenSpecScanning,
+        searchDebounce: Duration = .milliseconds(300)
     ) {
         self.engram = engram
         self.scanner = scanner
+        self.searchDebounce = searchDebounce
     }
 
     public convenience init(
@@ -137,8 +140,9 @@ public final class WikiViewModel {
         }
 
         isSearching = true
+        let debounce = searchDebounce
         searchTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: debounce)
             guard let self, !Task.isCancelled else { return }
             await self.performSearch(query: query, project: project)
         }

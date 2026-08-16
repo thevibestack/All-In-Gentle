@@ -18,12 +18,6 @@ public final class AppState {
         }
     }
 
-    /// Health snapshot for monitored services keyed by service identifier.
-    public var servicesHealthSnapshot: [String: ServiceHealthSnapshot] = [:]
-
-    /// Current scene phase, updated by the root view.
-    public var scenePhase: ScenePhase = .background
-
     /// Global search query bound to the toolbar search field.
     public var globalSearchQuery: String = ""
 
@@ -46,10 +40,12 @@ public final class AppState {
         self.showOnboarding = !(preferences.bool(for: .onboardingDismissed) || preferences.onboardingCompleted)
         self.selectedProjectPath = preferences.string(for: .lastProjectPath)
 
-        let migration = migrator ?? ProviderConfigurationMigrator(
-            preferences: preferences,
-            keychain: KeychainStore()
-        )
+        let migration =
+            migrator
+            ?? ProviderConfigurationMigrator(
+                preferences: preferences,
+                keychain: KeychainStore()
+            )
         Task {
             await migration.migrateIfNeeded()
         }

@@ -65,9 +65,8 @@ public final class ProjectDetailViewModel {
             let title = observation.title.localizedLowercase
             let content = observation.content.localizedLowercase
             let project = observation.project?.localizedLowercase ?? ""
-            return title.contains(nameQuery) || content.contains(nameQuery) ||
-                title.contains(pathQuery) || content.contains(pathQuery) ||
-                project.contains(nameQuery)
+            return title.contains(nameQuery) || content.contains(nameQuery) || title.contains(pathQuery)
+                || content.contains(pathQuery) || project.contains(nameQuery)
         }
     }
 }

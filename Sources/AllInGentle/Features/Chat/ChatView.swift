@@ -24,6 +24,12 @@ struct ChatView: View {
         .task {
             await viewModel.loadSessions()
         }
+        .onDisappear {
+            // Tab switch, window close, or navigation away: stop any in-flight
+            // generation so the provider stream is cancelled and the partial
+            // message is finalized exactly like the stop button.
+            viewModel.stopGeneration()
+        }
         .alert(L("chat.toolbar.rename"), isPresented: $showingRenameAlert) {
             TextField(L("chat.toolbar.rename.placeholder"), text: $renameText)
             Button(L("chat.toolbar.rename.save")) {

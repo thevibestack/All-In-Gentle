@@ -64,8 +64,7 @@ public final class ProjectsViewModel {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return items }
         return items.filter { item in
-            item.name.localizedStandardContains(query) ||
-                item.path.localizedStandardContains(query)
+            item.name.localizedStandardContains(query) || item.path.localizedStandardContains(query)
         }
     }
 
@@ -104,7 +103,7 @@ public final class ProjectsViewModel {
             engram,
             openCode,
             CodeGraphProjectSource(client: codegraph, root: graphRoot),
-            OpenSpecProjectSource(scanner: scanner, root: specRoot)
+            OpenSpecProjectSource(scanner: scanner, root: specRoot),
         ])
     }
 
@@ -138,7 +137,8 @@ public final class ProjectsViewModel {
 
             items = merged
             for item in items {
-                try? await store.save(StoredProject(id: item.id, name: item.name, path: item.path, sources: item.sources))
+                try? await store.save(
+                    StoredProject(id: item.id, name: item.name, path: item.path, sources: item.sources))
             }
             restoreSelectionIfNeeded()
             errorMessage = items.isEmpty && !messages.isEmpty ? messages.joined(separator: "\n") : nil

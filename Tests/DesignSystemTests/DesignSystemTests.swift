@@ -5,9 +5,6 @@ import XCTest
 
 @MainActor
 final class DesignSystemTests: XCTestCase {
-
-@MainActor
-final class DesignSystemTests: XCTestCase {
     // MARK: - Color tokens
 
     func testColorTokensExistInBothAppearances() {
@@ -24,7 +21,7 @@ final class DesignSystemTests: XCTestCase {
             AGColors.statusLive,
             AGColors.statusPlaceholder,
             AGColors.statusDisabled,
-            AGColors.statusError
+            AGColors.statusError,
         ]
         XCTAssertEqual(tokens.count, 13)
     }
@@ -95,29 +92,9 @@ final class DesignSystemTests: XCTestCase {
 
     // MARK: - Status badge
 
-    func testAGStatusBadgeCanBeConstructedFromInteractionState() {
-        let badge = AGStatusBadge(interactionState: .placeholder)
-        XCTAssertEqual(badge.status, .placeholder)
-    }
-
     func testAGStatusBadgeErrorCaseExists() {
         let badge = AGStatusBadge(status: .error)
         XCTAssertEqual(badge.status.catalogKey, "ds.badge.error")
-    }
-
-    func testAGStatusMappingMatrix() {
-        let expectations: [(InteractionState, AGStatus, String)] = [
-            (.live, .live, "badge.live"),
-            (.placeholder, .placeholder, "badge.placeholder"),
-            (.disabled, .disabled, "badge.disabled"),
-        ]
-        for (state, expectedStatus, expectedKey) in expectations {
-            let status = AGStatus(state)
-            XCTAssertEqual(status, expectedStatus, "AGStatus(\(state.rawValue)) must mirror the state")
-            XCTAssertEqual(status.catalogKey, expectedKey)
-        }
-        // .error has no InteractionState counterpart.
-        XCTAssertEqual(AGStatus.allCases.count, InteractionState.allCases.count + 1)
     }
 
     func testAGStatusCatalogKeys() {
@@ -153,5 +130,39 @@ final class DesignSystemTests: XCTestCase {
 
         focusBinding.wrappedValue = true
         XCTAssertTrue(focused)
+    }
+
+    func testAGSearchFieldStoresPlaceholderKey() {
+        let field = AGSearchField(text: .constant(""), placeholderKey: "chat.sidebar.search")
+        XCTAssertEqual(field.placeholderKey, "chat.sidebar.search")
+    }
+
+    // MARK: - Chat toolbar catalog keys
+
+    func testChatToolbarMenuKeyResolves() {
+        let value = L("chat.toolbar.menu")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.menu")
+    }
+
+    func testChatToolbarStopKeyResolves() {
+        let value = L("chat.toolbar.stop")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.stop")
+    }
+
+    func testChatToolbarSendKeyResolves() {
+        let value = L("chat.toolbar.send")
+        XCTAssertFalse(value.isEmpty)
+        XCTAssertNotEqual(value, "chat.toolbar.send")
+    }
+
+    // MARK: - Labeled value
+
+    func testAGLabeledValueHoldsLabelAndValue() {
+        let view = AGLabeledValue(label: "PID", value: "42")
+
+        XCTAssertEqual(view.label, "PID")
+        XCTAssertEqual(view.value, "42")
     }
 }

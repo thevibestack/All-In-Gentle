@@ -30,7 +30,7 @@ public final class ServicesViewModel {
             services: [
                 ServiceDescriptor(id: "engram", name: "Engram", processName: "engram", port: 7437),
                 ServiceDescriptor(id: "codegraph", name: "CodeGraph", processName: "codegraph"),
-                ServiceDescriptor(id: "opencode", name: "OpenCode", processName: "opencode")
+                ServiceDescriptor(id: "opencode", name: "OpenCode", processName: "opencode"),
             ]
         )
     }

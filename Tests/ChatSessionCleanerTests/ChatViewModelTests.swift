@@ -7,7 +7,6 @@ final class ChatViewModelTests: XCTestCase {
     private var preferences: PreferencesStore!
 
     override func setUp() async throws {
-        try await super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("chat-view-model-tests-\(UUID().uuidString)")
         let defaults = UserDefaults(suiteName: "chat-view-model-tests-\(UUID().uuidString)")!
@@ -19,7 +18,6 @@ final class ChatViewModelTests: XCTestCase {
         if let tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
-        try await super.tearDown()
     }
 
     private func makeViewModel(service: LLMService = MockLLMService(chunks: [])) -> ChatViewModel {
@@ -83,12 +81,19 @@ final class ChatViewModelTests: XCTestCase {
         let service = MockLLMService(chunks: [
             ChatChunk(textDelta: "Hello"),
             ChatChunk(textDelta: " world"),
-            ChatChunk(textDelta: nil, finishReason: "stop")
+            ChatChunk(textDelta: nil, finishReason: "stop"),
         ])
         let viewModel = makeViewModel(service: service)
         viewModel.input = "Hi"
 
         await viewModel.send()
+
+        // send() returns once the generation task is created; wait for the
+        // stream to complete before asserting its effects.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         let store = ChatSessionStore(directory: tempDirectory)
         let loaded = try await store.loadAll()
@@ -99,6 +104,111 @@ final class ChatViewModelTests: XCTestCase {
         XCTAssertEqual(loaded.first?.messages[1].role, .assistant)
         XCTAssertEqual(loaded.first?.messages[1].content, "Hello world")
         XCTAssertEqual(loaded.first?.title, "Hi")
+        XCTAssertFalse(viewModel.isStreaming, "a completed stream must not leave the view model streaming")
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    // MARK: - F17 streaming lifecycle
+
+    func testStreamingTaskDoesNotRetainViewModel() async {
+        let service = HangingLLMService(chunks: [ChatChunk(textDelta: "partial")])
+        weak var ref: ChatViewModel?
+        var viewModel: ChatViewModel? = makeViewModel(service: service)
+        ref = viewModel
+        viewModel?.input = "Hi"
+
+        let sending = Task { [weak viewModel] in
+            await viewModel?.send()
+        }
+        _ = sending
+
+        // Wait until the generation task is provably in flight: the partial
+        // chunk was appended, so the task is suspended at the open stream.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel?.messages.count != 2 && Date() < deadline {
+            await Task.yield()
+        }
+        XCTAssertEqual(viewModel?.messages.count, 2)
+
+        viewModel = nil
+
+        var deallocated = false
+        while Date() < deadline {
+            if ref == nil {
+                deallocated = true
+                break
+            }
+            await Task.yield()
+        }
+
+        XCTAssertTrue(deallocated, "view model must deallocate while a stream is in flight")
+    }
+
+    func testStopGenerationCancelsActiveStream() async {
+        let flag = TerminationFlag()
+        let service = HangingLLMService(
+            chunks: [ChatChunk(textDelta: "partial")],
+            onTerminated: { flag.raise() }
+        )
+        let viewModel = makeViewModel(service: service)
+        viewModel.input = "Hi"
+
+        let sending = Task { await viewModel.send() }
+        _ = sending
+        // Wait until the generation task is provably in flight: isStreaming is
+        // set before the task is created, so wait for the partial chunk to be
+        // appended instead.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.messages.count < 2 && Date() < deadline {
+            await Task.yield()
+        }
+        XCTAssertEqual(viewModel.messages.count, 2)
+
+        viewModel.stopGeneration()
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(flag.isRaised, "cancelling the generation task must terminate the provider stream")
+        XCTAssertFalse(viewModel.isStreaming)
+    }
+
+    func testStopGenerationWithoutActiveTaskIsNoOp() async throws {
+        let viewModel = makeViewModel(service: HangingLLMService())
+
+        viewModel.stopGeneration()
+
+        XCTAssertFalse(viewModel.isStreaming)
+        XCTAssertNil(viewModel.errorMessage)
+        let store = ChatSessionStore(directory: tempDirectory)
+        let loaded = try await store.loadAll()
+        XCTAssertTrue(loaded.isEmpty, "no generation was started, so nothing may be persisted")
+    }
+
+    func testLifecycleCancelPersistsPartialMessage() async throws {
+        let service = HangingLLMService(chunks: [ChatChunk(textDelta: "partial")])
+        let viewModel = makeViewModel(service: service)
+        viewModel.input = "Hi"
+
+        let sending = Task { await viewModel.send() }
+        _ = sending
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.messages.count < 2 && Date() < deadline {
+            await Task.yield()
+        }
+        XCTAssertEqual(viewModel.messages.count, 2)
+
+        viewModel.stopGeneration()
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
+
+        XCTAssertFalse(viewModel.isStreaming)
+        let store = ChatSessionStore(directory: tempDirectory)
+        let loaded = try await store.loadAll()
+        XCTAssertEqual(loaded.first?.messages.count, 2)
+        XCTAssertEqual(loaded.first?.messages.last?.role, .assistant)
+        XCTAssertEqual(loaded.first?.messages.last?.content, "partial")
     }
 
     func testFilterSessionsByTitleOrUserMessage() async {
@@ -157,16 +267,25 @@ final class ChatViewModelTests: XCTestCase {
             .failure(AllInGentleError.sourceUnavailable("network down")),
             .success([
                 ChatChunk(textDelta: "Retried"),
-                ChatChunk(textDelta: nil, finishReason: "stop")
-            ])
+                ChatChunk(textDelta: nil, finishReason: "stop"),
+            ]),
         ])
         let viewModel = makeViewModel(service: service)
         viewModel.input = "Hi"
 
         await viewModel.send()
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
+
         XCTAssertNotNil(viewModel.errorMessage)
 
         await viewModel.retryLastSend()
+        let retryDeadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < retryDeadline {
+            await Task.yield()
+        }
 
         let userMessages = viewModel.messages.filter { $0.role == .user }
         XCTAssertEqual(userMessages.count, 1, "Retry must not duplicate the user message")
@@ -180,8 +299,9 @@ final class ChatViewModelTests: XCTestCase {
         XCTAssertEqual(streamCalls, 2)
         let captured = await service.capturedCalls
         XCTAssertEqual(captured.count, 2)
-        XCTAssertEqual(captured[1].filter { $0.role == .user }.count, 1,
-                       "The retried stream must receive exactly one user message")
+        XCTAssertEqual(
+            captured[1].filter { $0.role == .user }.count, 1,
+            "The retried stream must receive exactly one user message")
 
         let store = ChatSessionStore(directory: tempDirectory)
         let loaded = try await store.loadAll()
@@ -210,8 +330,9 @@ final class ChatViewModelTests: XCTestCase {
         let errorBeforeRetry = viewModel.errorMessage
         await viewModel.retryLastSend()
 
-        XCTAssertEqual(viewModel.errorMessage, errorBeforeRetry,
-                       "A payload-less retry must leave the error banner untouched")
+        XCTAssertEqual(
+            viewModel.errorMessage, errorBeforeRetry,
+            "A payload-less retry must leave the error banner untouched")
         XCTAssertFalse(viewModel.isStreaming)
         XCTAssertTrue(viewModel.messages.isEmpty)
     }
@@ -247,12 +368,17 @@ final class ChatViewModelTests: XCTestCase {
         viewModel.input = "Hello"
 
         await viewModel.send()
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         XCTAssertEqual(viewModel.errorMessage, error.localizedDescription)
         XCTAssertFalse(viewModel.isStreaming)
         XCTAssertTrue(viewModel.messages.contains { $0.role == .user })
-        XCTAssertFalse(viewModel.messages.contains { $0.role == .assistant },
-                       "No empty assistant message may survive a stream error")
+        XCTAssertFalse(
+            viewModel.messages.contains { $0.role == .assistant },
+            "No empty assistant message may survive a stream error")
     }
 
     // R5: when the stream for session A finalizes after the user switched to
@@ -273,6 +399,10 @@ final class ChatViewModelTests: XCTestCase {
         viewModel.selectedSessionID = sessionB.id
         await service.release()
         await sendTask.value
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         let finalA = viewModel.sessions.first { $0.id == sessionA.id }
         XCTAssertEqual(finalA?.messages.count, 2)
@@ -391,5 +521,24 @@ actor SuspendingLLMService: LLMService {
         } else {
             releaseGate = continuation
         }
+    }
+}
+
+/// Thread-safe boolean flag asserted from a ``@Sendable`` stream-termination
+/// callback (F17 cancellation propagation).
+private final class TerminationFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var raised = false
+
+    func raise() {
+        lock.lock()
+        raised = true
+        lock.unlock()
+    }
+
+    var isRaised: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return raised
     }
 }

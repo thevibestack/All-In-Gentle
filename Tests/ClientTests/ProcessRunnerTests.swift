@@ -15,7 +15,7 @@ final class ProcessRunnerTests: XCTestCase {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("txt")
         defer { try? FileManager.default.removeItem(at: tmp) }
-        let payload = Data(repeating: 0x61, count: 100_000) // "a" x 100KB
+        let payload = Data(repeating: 0x61, count: 100_000)  // "a" x 100KB
         try payload.write(to: tmp)
 
         let runner = ProcessRunner()

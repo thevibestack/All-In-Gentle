@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class WikiViewModelTests: XCTestCase {
@@ -10,17 +11,20 @@ final class WikiViewModelTests: XCTestCase {
         let docs = [
             OpenSpecScanner.Document(id: "\(projectPath)/spec.md", path: "\(projectPath)/spec.md", title: "Spec"),
             OpenSpecScanner.Document(id: "\(projectPath)/readme.md", path: "\(projectPath)/readme.md", title: "Readme"),
-            OpenSpecScanner.Document(id: "/other/project.md", path: "/other/project.md", title: "Other")
+            OpenSpecScanner.Document(id: "/other/project.md", path: "/other/project.md", title: "Other"),
         ]
         let scanner = StubOpenSpecScanning(documents: docs)
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
 
         viewModel.loadDocuments(forProjectPath: projectPath)
-        try await Task.sleep(for: .milliseconds(50))
+        let loaded = await waitUntil {
+            viewModel.documents.count == 2
+        }
 
+        XCTAssertTrue(loaded)
         XCTAssertEqual(viewModel.documents.count, 2)
         XCTAssertTrue(viewModel.documents.allSatisfy { $0.path.hasPrefix(projectPath) })
     }
@@ -31,19 +35,28 @@ final class WikiViewModelTests: XCTestCase {
             preview: "preview"
         )
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
         viewModel.loadDocuments(forProjectPath: "/tmp")
-        try await Task.sleep(for: .milliseconds(50))
+        let loaded = await waitUntil {
+            viewModel.documents.count == 1
+        }
+        XCTAssertTrue(loaded)
         XCTAssertEqual(viewModel.documents.count, 1)
 
         viewModel.selectDocument(viewModel.documents[0])
-        try await Task.sleep(for: .milliseconds(50))
+        let previewLoaded = await waitUntil {
+            !viewModel.previewText.isEmpty
+        }
+        XCTAssertTrue(previewLoaded)
         XCTAssertFalse(viewModel.previewText.isEmpty)
 
         viewModel.loadDocuments(forProjectPath: nil)
-        try await Task.sleep(for: .milliseconds(50))
+        let cleared = await waitUntil {
+            viewModel.documents.isEmpty && viewModel.previewText.isEmpty
+        }
+        XCTAssertTrue(cleared)
 
         XCTAssertTrue(viewModel.documents.isEmpty)
         XCTAssertNil(viewModel.selectedDocument)
@@ -55,11 +68,10 @@ final class WikiViewModelTests: XCTestCase {
             id: "m1",
             title: "Match",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let viewModel = WikiViewModel(
             engram: engram,
             scanner: StubOpenSpecScanning()
@@ -67,26 +79,66 @@ final class WikiViewModelTests: XCTestCase {
         viewModel.selectedProjectPath = "/projects/p1"
 
         viewModel.searchQuery = "match"
-        try await Task.sleep(for: .milliseconds(400))
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
 
-        XCTAssertEqual(engram.lastQuery, "match")
-        XCTAssertEqual(engram.lastProject, "/projects/p1")
+        let lastQuery = await engram.lastQuery
+        let lastProject = await engram.lastProject
+        XCTAssertEqual(lastQuery, "match")
+        XCTAssertEqual(lastProject, "/projects/p1")
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.id, "m1")
     }
 
+    func testSearchWithZeroDebounceExecutesImmediately() async throws {
+        let observation = MemoryObservation(
+            id: "m1",
+            title: "Match",
+            content: "Content",
+            project: "/projects/p1",
+            tags: []
+        )
+        let engram = EngramSearchProviderStub(results: [observation])
+        let viewModel = WikiViewModel(
+            engram: engram,
+            scanner: StubOpenSpecScanning(),
+            searchDebounce: .zero
+        )
+        viewModel.selectedProjectPath = "/projects/p1"
+
+        viewModel.searchQuery = "match"
+        let filled = await waitUntil(timeout: .milliseconds(200)) {
+            !viewModel.results.isEmpty
+        }
+
+        XCTAssertTrue(filled, "search must run without debounce delay when searchDebounce is .zero")
+        XCTAssertEqual(viewModel.results.first?.id, "m1")
+        let lastQuery = await engram.lastQuery
+        XCTAssertEqual(lastQuery, "match")
+    }
+
     func testSearchSkippedWhenNoProjectSelected() async throws {
-        let engram = StubEngramSearchProvider()
-        engram.results = [MemoryObservation(id: "m1", title: "Match", content: "Content", project: nil, tags: [])]
+        let engram = EngramSearchProviderStub(
+            results: [MemoryObservation(id: "m1", title: "Match", content: "Content", project: nil, tags: [])]
+        )
         let viewModel = WikiViewModel(
             engram: engram,
             scanner: StubOpenSpecScanning()
         )
 
         viewModel.searchQuery = "match"
-        try await Task.sleep(for: .milliseconds(400))
 
-        XCTAssertNil(engram.lastQuery)
+        // No project selected: the search must be skipped. Bounded poll to
+        // surface any delayed (incorrect) search within the debounce window.
+        let searched = await waitUntil(timeout: .milliseconds(350)) {
+            await engram.lastQuery != nil
+        }
+        XCTAssertFalse(searched)
+
+        let lastQuery = await engram.lastQuery
+        XCTAssertNil(lastQuery)
         XCTAssertTrue(viewModel.results.isEmpty)
         XCTAssertFalse(viewModel.isSearching)
     }
@@ -97,7 +149,7 @@ final class WikiViewModelTests: XCTestCase {
                 [
                     MemoryObservation(id: "a", title: "A", content: "", project: "/projects/alpha", tags: []),
                     MemoryObservation(id: "b", title: "B", content: "", project: "/projects/beta", tags: []),
-                    MemoryObservation(id: "c", title: "C", content: "", project: nil, tags: [])
+                    MemoryObservation(id: "c", title: "C", content: "", project: nil, tags: []),
                 ]
             }
         }
@@ -108,7 +160,10 @@ final class WikiViewModelTests: XCTestCase {
         viewModel.selectedProjectPath = "/projects/alpha"
 
         viewModel.searchQuery = "query"
-        try await Task.sleep(for: .milliseconds(400))
+        let filled = await waitUntil {
+            !viewModel.results.isEmpty
+        }
+        XCTAssertTrue(filled)
 
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.id, "a")

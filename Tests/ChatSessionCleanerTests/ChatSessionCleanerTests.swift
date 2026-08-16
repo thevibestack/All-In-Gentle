@@ -12,7 +12,7 @@ final class ChatSessionCleanerTests: XCTestCase {
         let service = MockLLMService(chunks: [
             ChatChunk(textDelta: "Hola"),
             ChatChunk(textDelta: " mundo"),
-            ChatChunk(textDelta: nil, finishReason: "stop")
+            ChatChunk(textDelta: nil, finishReason: "stop"),
         ])
         let viewModel = ChatViewModel(
             service: service,
@@ -21,6 +21,13 @@ final class ChatSessionCleanerTests: XCTestCase {
         viewModel.input = "Hi"
 
         await viewModel.send()
+
+        // send() returns once the generation task is created; wait for the
+        // stream to complete before asserting its effects.
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         XCTAssertEqual(viewModel.messages.count, 2)
         XCTAssertEqual(viewModel.messages[0].role, .user)
@@ -40,6 +47,11 @@ final class ChatSessionCleanerTests: XCTestCase {
         viewModel.input = "Hello"
 
         await viewModel.send()
+
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.isStreaming && Date() < deadline {
+            await Task.yield()
+        }
 
         XCTAssertEqual(viewModel.messages.count, 1)
         XCTAssertEqual(viewModel.messages[0].role, .user)
@@ -91,11 +103,11 @@ final class ChatSessionCleanerTests: XCTestCase {
                 totalTokens: 30,
                 estimatedCost: 0.0003,
                 latestDate: Date(timeIntervalSince1970: 1500)
-            )
+            ),
         ]
         let projects = [
             Project(id: "proj-a", name: "Project Alpha", path: "/alpha", source: .opencode),
-            Project(id: "proj-b", name: "", path: "/beta", source: .opencode)
+            Project(id: "proj-b", name: "", path: "/beta", source: .opencode),
         ]
 
         let viewModel = SessionCleanerViewModel(sessions: sessions, projects: projects)
@@ -134,7 +146,7 @@ final class ChatSessionCleanerTests: XCTestCase {
                 totalTokens: 1,
                 estimatedCost: 0,
                 latestDate: Date()
-            )
+            ),
         ]
 
         let viewModel = SessionCleanerViewModel(sessions: sessions, projects: [])
@@ -168,5 +180,34 @@ struct MockLLMService: LLMService {
 struct FailingLLMService: LLMService {
     func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
         throw AllInGentleError.sourceUnavailable("network down")
+    }
+}
+
+/// Test double whose stream yields optional prefix chunks and never finishes.
+///
+/// F17: the stream stays open so tests can observe cancellation through
+/// `onTermination` and verify that a view model is not retained by its
+/// streaming task while a generation is in flight.
+struct HangingLLMService: LLMService {
+    let chunks: [ChatChunk]
+    let onTerminated: (@Sendable () -> Void)?
+
+    init(
+        chunks: [ChatChunk] = [ChatChunk(textDelta: "partial")],
+        onTerminated: (@Sendable () -> Void)? = nil
+    ) {
+        self.chunks = chunks
+        self.onTerminated = onTerminated
+    }
+
+    func stream(messages: [ChatMessage]) async throws -> AsyncThrowingStream<ChatChunk, Error> {
+        AsyncThrowingStream { continuation in
+            for chunk in chunks {
+                continuation.yield(chunk)
+            }
+            continuation.onTermination = { _ in
+                onTerminated?()
+            }
+        }
     }
 }

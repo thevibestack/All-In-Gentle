@@ -36,6 +36,7 @@ struct ChatInputBarView: View {
                         .foregroundStyle(AGColors.statusError)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L("chat.toolbar.stop"))
                 .keyboardShortcut(.escape, modifiers: [])
             } else {
                 Button {
@@ -46,6 +47,7 @@ struct ChatInputBarView: View {
                         .foregroundStyle(viewModel.canSend ? AGColors.accent : AGColors.statusDisabled)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L("chat.toolbar.send"))
                 .disabled(!viewModel.canSend)
                 .keyboardShortcut(.return, modifiers: .command)
             }
