@@ -17,6 +17,53 @@ internal enum SQLiteValue: Sendable {
     case text(String)
 }
 
+internal enum SQLiteColumn: Sendable, Equatable {
+    case null
+    case int64(Int64)
+    case double(Double)
+    case text(String)
+}
+
+internal struct SQLiteRow: Sendable {
+    let columns: [SQLiteColumn]
+
+    subscript(index: Int) -> SQLiteColumn {
+        columns[index]
+    }
+
+    func isNull(_ index: Int) -> Bool {
+        columns[index] == .null
+    }
+
+    func text(_ index: Int) -> String? {
+        if case .text(let value) = columns[index] { return value }
+        return nil
+    }
+
+    func int64(_ index: Int) -> Int64? {
+        if case .int64(let value) = columns[index] { return value }
+        return nil
+    }
+
+    func double(_ index: Int) -> Double? {
+        switch columns[index] {
+        case .int64(let value): return Double(value)
+        case .double(let value): return value
+        case .null, .text: return nil
+        }
+    }
+
+    /// Epoch-millis accessor: INTEGER/REAL native; numeric TEXT fallback for legacy rows.
+    func millis(_ index: Int) -> Double? {
+        switch columns[index] {
+        case .int64(let value): return Double(value)
+        case .double(let value): return value
+        case .text(let value): return Double(value)
+        case .null: return nil
+        }
+    }
+}
+
 public actor OpenCodeClient {
     public let dbPath: String
 
@@ -33,10 +80,10 @@ public actor OpenCodeClient {
             """
         )
         return rows.compactMap { row in
-            guard let id = row[0], let path = row[2] else { return nil }
-            let rawName = row[1]
+            guard let id = row.text(0), let path = row.text(2) else { return nil }
+            let rawName = row.text(1)
             let name = rawName?.isEmpty == false ? rawName! : (path as NSString).lastPathComponent
-            let date = row[3].flatMap { parseMillis($0) }
+            let date = row.millis(3).map { millisToDate($0) }
             return Project(
                 id: id,
                 name: name,
@@ -56,14 +103,14 @@ public actor OpenCodeClient {
             """
         )
         return rows.compactMap { row in
-            guard let id = row[0],
-                let project = row[1],
-                let title = row[2]
+            guard let id = row.text(0),
+                let project = row.text(1),
+                let title = row.text(2)
             else { return nil }
-            let cost = row[3].flatMap { Double($0) } ?? 0
-            let input = row[4].flatMap { Int($0) } ?? 0
-            let output = row[5].flatMap { Int($0) } ?? 0
-            let date = row[6].flatMap { parseMillis($0) } ?? Date()
+            let cost = displayDouble(row, 3) ?? 0
+            let input = displayInt(row, 4) ?? 0
+            let output = displayInt(row, 5) ?? 0
+            let date = row.millis(6).map { millisToDate($0) } ?? Date()
             return SessionSummary(
                 id: id,
                 project: project,
@@ -86,15 +133,15 @@ public actor OpenCodeClient {
             """
         )
         return rows.compactMap { row in
-            guard let id = row[0],
-                let project = row[1],
-                let session = row[2]
+            guard let id = row.text(0),
+                let project = row.text(1),
+                let session = row.text(2)
             else { return nil }
-            let cost = row[3].flatMap { Double($0) } ?? 0
-            let input = row[4].flatMap { Int($0) } ?? 0
-            let output = row[5].flatMap { Int($0) } ?? 0
-            let timeUpdated = row[6].flatMap { Double($0) }
-            let date = row[6].flatMap { parseMillis($0) } ?? Date()
+            let cost = displayDouble(row, 3) ?? 0
+            let input = displayInt(row, 4) ?? 0
+            let output = displayInt(row, 5) ?? 0
+            let timeUpdated = row.millis(6)
+            let date = timeUpdated.map { millisToDate($0) } ?? Date()
             return TokenUsage(
                 id: id,
                 project: project,
@@ -127,16 +174,15 @@ public actor OpenCodeClient {
         }
         let rows = try executeReadOnly(sql)
         return rows.compactMap { row in
-            guard let id = row[0],
-                let project = row[1],
-                let session = row[2],
-                let timeUpdatedString = row[6],
-                let timeUpdated = Double(timeUpdatedString)
+            guard let id = row.text(0),
+                let project = row.text(1),
+                let session = row.text(2),
+                let timeUpdated = row.millis(6),
+                timeUpdated.isFinite
             else { return nil }
-            let cost = row[3].flatMap { Double($0) } ?? 0
-            let input = row[4].flatMap { Int($0) } ?? 0
-            let output = row[5].flatMap { Int($0) } ?? 0
-            let date = parseMillis(timeUpdatedString) ?? Date()
+            let cost = displayDouble(row, 3) ?? 0
+            let input = displayInt(row, 4) ?? 0
+            let output = displayInt(row, 5) ?? 0
             return TokenUsage(
                 id: id,
                 project: project,
@@ -144,7 +190,7 @@ public actor OpenCodeClient {
                 promptTokens: input,
                 completionTokens: output,
                 estimatedCost: cost,
-                timestamp: date,
+                timestamp: millisToDate(timeUpdated),
                 rawTimeUpdated: timeUpdated
             )
         }
@@ -154,7 +200,7 @@ public actor OpenCodeClient {
         value.replacingOccurrences(of: "'", with: "''")
     }
 
-    internal func executeReadOnly(_ sql: String, bind values: [SQLiteValue] = []) throws -> [[String?]] {
+    internal func executeReadOnly(_ sql: String, bind values: [SQLiteValue] = []) throws -> [SQLiteRow] {
         try validateReadOnly(sql)
 
         var db: OpaquePointer?
@@ -189,16 +235,28 @@ public actor OpenCodeClient {
         }
 
         let columnCount = Int(sqlite3_column_count(statement))
-        var results: [[String?]] = []
+        var results: [SQLiteRow] = []
         while sqlite3_step(statement) == SQLITE_ROW {
-            var row = [String?](repeating: nil, count: columnCount)
+            var columns: [SQLiteColumn] = []
+            columns.reserveCapacity(columnCount)
             for i in 0..<columnCount {
-                if let text = sqlite3_column_text(statement, Int32(i)) {
-                    let cString = UnsafeRawPointer(text).assumingMemoryBound(to: Int8.self)
-                    row[i] = String(cString: cString)
+                let index = Int32(i)
+                switch sqlite3_column_type(statement, index) {
+                case SQLITE_INTEGER:
+                    columns.append(.int64(sqlite3_column_int64(statement, index)))
+                case SQLITE_FLOAT:
+                    columns.append(.double(sqlite3_column_double(statement, index)))
+                case SQLITE_TEXT:
+                    if let text = sqlite3_column_text(statement, index) {
+                        columns.append(.text(String(cString: text)))
+                    } else {
+                        columns.append(.null)
+                    }
+                default:
+                    columns.append(.null)
                 }
             }
-            results.append(row)
+            results.append(SQLiteRow(columns: columns))
         }
         return results
     }
@@ -208,6 +266,28 @@ public actor OpenCodeClient {
         guard trimmed.hasPrefix("SELECT") else {
             throw AllInGentleError.readOnlyViolation
         }
+    }
+
+    private func displayDouble(_ row: SQLiteRow, _ index: Int) -> Double? {
+        switch row[index] {
+        case .null: return nil
+        case .int64(let value): return Double(value)
+        case .double(let value): return value
+        case .text(let value): return Double(value)
+        }
+    }
+
+    private func displayInt(_ row: SQLiteRow, _ index: Int) -> Int? {
+        switch row[index] {
+        case .null: return nil
+        case .int64(let value): return Int(value)
+        case .double(let value): return Int(value)
+        case .text(let value): return Int(value)
+        }
+    }
+
+    private func millisToDate(_ milliseconds: Double) -> Date {
+        Date(timeIntervalSince1970: milliseconds / 1000.0)
     }
 
     private func parseMillis(_ text: String) -> Date? {

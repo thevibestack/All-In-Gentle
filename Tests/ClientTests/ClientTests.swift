@@ -114,7 +114,7 @@ final class ClientTests: XCTestCase {
         let rows = try await client.executeReadOnly("SELECT ?", bind: [.text("a'b")])
 
         XCTAssertEqual(rows.count, 1)
-        XCTAssertEqual(rows.first?.first, "a'b", "Bound text must round-trip through the placeholder")
+        XCTAssertEqual(rows.first?.text(0), "a'b", "Bound text must round-trip through the placeholder")
     }
 
     func testExecuteReadOnlyRejectsWriteQueryWithBindAndDoesNotMutateFile() async throws {
@@ -164,6 +164,43 @@ final class ClientTests: XCTestCase {
         let page = try await client.tokenUsagePage(limit: 10)
 
         XCTAssertEqual(page.count, 10, "LIMIT ? must return exactly 10 of 15 seeded rows")
+    }
+
+    // MARK: - OpenCodeClient typed row materialization (F25)
+
+    func testExecuteReadOnlyMaterializesTypedColumns() async throws {
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let rows = try await client.executeReadOnly("SELECT 1, 'x', 0.5, NULL")
+        let row = try XCTUnwrap(rows.first)
+
+        XCTAssertEqual(row.int64(0), 1)
+        XCTAssertEqual(row.text(1), "x")
+        XCTAssertEqual(row.double(2), 0.5)
+        XCTAssertTrue(row.isNull(3))
+    }
+
+    func testExecuteReadOnlyPreservesRealPrecision() async throws {
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let rows = try await client.executeReadOnly("SELECT 0.12345678901234567")
+
+        XCTAssertEqual(rows.first?.double(0), 0.12345678901234567)
+    }
+
+    func testTokenUsagePagePreservesRealCostPrecision() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.12345678901234567,10,20,1000);"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let page = try await client.tokenUsagePage(limit: 10)
+
+        XCTAssertEqual(page.count, 1)
+        XCTAssertEqual(
+            page.first?.estimatedCost, 0.12345678901234567, "REAL cost must be read via sqlite3_column_double")
     }
 
     func testProcessMonitorCanStartMonitoringSequence() async {
