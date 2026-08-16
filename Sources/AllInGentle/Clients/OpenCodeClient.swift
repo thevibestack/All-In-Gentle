@@ -130,8 +130,9 @@ public actor OpenCodeClient {
             SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
             FROM session
             ORDER BY time_updated DESC
-            LIMIT \(clamped)
-            """
+            LIMIT ?
+            """,
+            bind: [.int64(Int64(clamped))]
         )
         return rows.compactMap { row in
             guard let id = row.text(0),
@@ -163,21 +164,28 @@ public actor OpenCodeClient {
             FROM session
             """
         let sql: String
+        let bind: [SQLiteValue]
         if let cursor {
             guard cursor.timeUpdated.isFinite else {
                 throw AllInGentleError.sourceUnavailable("non-finite cursor")
             }
-            let escapedID = escapeSQLString(cursor.id)
             sql =
-                base + """
-                    WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
+                base + "\n" + """
+                    WHERE (time_updated < ? OR (time_updated = ? AND id < ?))
                     ORDER BY time_updated DESC, id DESC
-                    LIMIT \(clamped)
+                    LIMIT ?
                     """
+            bind = [
+                .double(cursor.timeUpdated),
+                .double(cursor.timeUpdated),
+                .text(cursor.id),
+                .int64(Int64(clamped)),
+            ]
         } else {
-            sql = base + " ORDER BY time_updated DESC, id DESC LIMIT \(clamped)"
+            sql = base + " ORDER BY time_updated DESC, id DESC LIMIT ?"
+            bind = [.int64(Int64(clamped))]
         }
-        let rows = try executeReadOnly(sql)
+        let rows = try executeReadOnly(sql, bind: bind)
         return rows.compactMap { row in
             guard let id = row.text(0),
                 let project = row.text(1),

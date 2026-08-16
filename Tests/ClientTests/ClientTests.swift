@@ -237,6 +237,37 @@ final class ClientTests: XCTestCase {
         }
     }
 
+    // MARK: - OpenCodeClient placeholder-bound keyset SQL (F25)
+
+    func testTokenUsagePageCursorAtOldestRowReturnsEmptyPage() async throws {
+        var seed = Self.sessionSeed
+        for i in 0..<3 {
+            seed += "INSERT INTO session VALUES ('s\(i)','p','t\(i)',0.1,10,20,\(1_000 + i));"
+        }
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let cursor = TokenCursor(timeUpdated: 1_000, id: "s0")
+        let page = try await client.tokenUsagePage(after: cursor, limit: 10)
+
+        XCTAssertTrue(page.isEmpty, "No rows before the oldest cursor means an empty page (S9)")
+    }
+
+    func testTokenUsagePagePreservesIdDescTieBreak() async throws {
+        var seed = Self.sessionSeed
+        for id in ["a", "b", "c"] {
+            seed += "INSERT INTO session VALUES ('\(id)','p','t',0.1,10,20,1000);"
+        }
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let first = try await client.tokenUsagePage(limit: 2)
+        XCTAssertEqual(first.map(\.id), ["c", "b"], "Equal timestamps must tie-break with id DESC (R6)")
+
+        let second = try await client.tokenUsagePage(after: TokenCursor(timeUpdated: 1000, id: "b"), limit: 2)
+        XCTAssertEqual(second.map(\.id), ["a"], "Keyset resume must return remaining rows in id DESC order (R6)")
+    }
+
     func testProcessMonitorCanStartMonitoringSequence() async {
         let runner = CapturingProcessRunner()
         await runner.setNextOutput("")
