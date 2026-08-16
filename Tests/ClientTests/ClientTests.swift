@@ -23,6 +23,31 @@ actor CapturingProcessRunner: ProcessRunning {
 
 final class ClientTests: XCTestCase {
 
+    private static let sessionSeed =
+        """
+        CREATE TABLE session (
+            id TEXT PRIMARY KEY,
+            project_id TEXT,
+            title TEXT,
+            cost REAL,
+            tokens_input INTEGER,
+            tokens_output INTEGER,
+            time_updated INTEGER
+        );
+        """
+
+    /// Creates a hermetic temp database seeded with `seedSQL` and an `OpenCodeClient` over it.
+    private func makeClient(seedSQL: String) -> (client: OpenCodeClient, dbURL: URL) {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("db")
+        var db: OpaquePointer?
+        sqlite3_open(tempURL.path, &db)
+        sqlite3_exec(db, seedSQL, nil, nil, nil)
+        sqlite3_close(db)
+        return (OpenCodeClient(dbPath: tempURL.path), tempURL)
+    }
+
     func testCodeGraphClientPassesLiteralPathArgument() async {
         let runner = CapturingProcessRunner()
         let client = CodeGraphClient(runner: runner)
@@ -42,17 +67,9 @@ final class ClientTests: XCTestCase {
     }
 
     func testOpenCodeClientRejectsWriteQueriesAndDoesNotMutateFile() async throws {
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("db")
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        var writableDB: OpaquePointer?
-        sqlite3_open(tempURL.path, &writableDB)
-        sqlite3_exec(writableDB, "CREATE TABLE foo (id INTEGER PRIMARY KEY);", nil, nil, nil)
-        sqlite3_close(writableDB)
-
-        let client = OpenCodeClient(dbPath: tempURL.path)
         do {
             _ = try await client.executeReadOnly("INSERT INTO foo VALUES (1)")
             XCTFail("Write query should be rejected")
@@ -72,29 +89,81 @@ final class ClientTests: XCTestCase {
     }
 
     func testOpenCodeClientProjectsDeriveNameFromEmptyOpenCodeName() async throws {
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("db")
+        let (client, tempURL) = makeClient(
+            seedSQL:
+                """
+                CREATE TABLE project (id TEXT PRIMARY KEY, name TEXT, worktree TEXT, time_updated INTEGER);
+                INSERT INTO project VALUES ('p1', '', '/tmp/My Project', 1000);
+                """
+        )
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        var writableDB: OpaquePointer?
-        sqlite3_open(tempURL.path, &writableDB)
-        sqlite3_exec(
-            writableDB,
-            """
-            CREATE TABLE project (id TEXT PRIMARY KEY, name TEXT, worktree TEXT, time_updated INTEGER);
-            INSERT INTO project VALUES ('p1', '', '/tmp/My Project', 1000);
-            """,
-            nil, nil, nil
-        )
-        sqlite3_close(writableDB)
-
-        let client = OpenCodeClient(dbPath: tempURL.path)
         let projects = try await client.projects()
         XCTAssertEqual(projects.count, 1)
         XCTAssertEqual(projects.first?.name, "My Project")
         XCTAssertEqual(projects.first?.path, "/tmp/My Project")
         XCTAssertEqual(projects.first?.source, .opencode)
+    }
+
+    // MARK: - OpenCodeClient SQL parameter binding (F25)
+
+    func testExecuteReadOnlyBindsTextParameterWithEmbeddedQuote() async throws {
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let rows = try await client.executeReadOnly("SELECT ?", bind: [.text("a'b")])
+
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows.first?.first, "a'b", "Bound text must round-trip through the placeholder")
+    }
+
+    func testExecuteReadOnlyRejectsWriteQueryWithBindAndDoesNotMutateFile() async throws {
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        do {
+            _ = try await client.executeReadOnly("INSERT INTO foo VALUES (?)", bind: [.int64(1)])
+            XCTFail("Write query should be rejected")
+        } catch let error as AllInGentleError {
+            XCTAssertEqual(error, .readOnlyViolation)
+        }
+
+        var verify: OpaquePointer?
+        sqlite3_open(tempURL.path, &verify)
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(verify, "SELECT COUNT(*) FROM foo", -1, &statement, nil)
+        sqlite3_step(statement)
+        let count = Int(sqlite3_column_int(statement, 0))
+        sqlite3_finalize(statement)
+        sqlite3_close(verify)
+        XCTAssertEqual(count, 0, "Database file must not be mutated")
+    }
+
+    func testExecuteReadOnlyThrowsWhenBindIndexOutOfRange() async throws {
+        let (client, tempURL) = makeClient(seedSQL: "CREATE TABLE foo (id INTEGER PRIMARY KEY);")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        do {
+            _ = try await client.executeReadOnly("SELECT 1", bind: [.int64(1), .int64(2)])
+            XCTFail("Binding more values than placeholders must throw")
+        } catch let error as AllInGentleError {
+            guard case .sourceUnavailable = error else {
+                return XCTFail("Expected sourceUnavailable, got \(error)")
+            }
+        }
+    }
+
+    func testTokenUsagePageBindsLimitPlaceholderReturnsExactlyLimitRows() async throws {
+        var seed = Self.sessionSeed
+        for i in 0..<15 {
+            seed += "INSERT INTO session VALUES ('s\(i)','p','t\(i)',0.1,10,20,\(1_000 + i));"
+        }
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let page = try await client.tokenUsagePage(limit: 10)
+
+        XCTAssertEqual(page.count, 10, "LIMIT ? must return exactly 10 of 15 seeded rows")
     }
 
     func testProcessMonitorCanStartMonitoringSequence() async {

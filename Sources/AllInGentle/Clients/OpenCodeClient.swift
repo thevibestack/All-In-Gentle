@@ -11,6 +11,12 @@ public struct TokenCursor: Codable, Hashable, Sendable {
     }
 }
 
+internal enum SQLiteValue: Sendable {
+    case int64(Int64)
+    case double(Double)
+    case text(String)
+}
+
 public actor OpenCodeClient {
     public let dbPath: String
 
@@ -148,7 +154,7 @@ public actor OpenCodeClient {
         value.replacingOccurrences(of: "'", with: "''")
     }
 
-    internal func executeReadOnly(_ sql: String) throws -> [[String?]] {
+    internal func executeReadOnly(_ sql: String, bind values: [SQLiteValue] = []) throws -> [[String?]] {
         try validateReadOnly(sql)
 
         var db: OpaquePointer?
@@ -166,6 +172,21 @@ public actor OpenCodeClient {
             throw AllInGentleError.sourceUnavailable("Unable to prepare query: \(prepareStatus)")
         }
         defer { sqlite3_finalize(statement) }
+
+        for (index, value) in values.enumerated() {
+            let status: Int32
+            switch value {
+            case .int64(let intValue):
+                status = sqlite3_bind_int64(statement, Int32(index + 1), intValue)
+            case .double(let doubleValue):
+                status = sqlite3_bind_double(statement, Int32(index + 1), doubleValue)
+            case .text(let textValue):
+                status = sqlite3_bind_text(statement, Int32(index + 1), textValue, -1, SQLITE_TRANSIENT)
+            }
+            guard status == SQLITE_OK else {
+                throw AllInGentleError.sourceUnavailable("Unable to bind parameter \(index + 1): \(status)")
+            }
+        }
 
         let columnCount = Int(sqlite3_column_count(statement))
         var results: [[String?]] = []
@@ -194,3 +215,5 @@ public actor OpenCodeClient {
         return Date(timeIntervalSince1970: value / 1000.0)
     }
 }
+
+private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
