@@ -1,0 +1,21 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+permissions: { contents: read }
+jobs:
+  ci:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test
+      - run: swift format lint -r --strict --configuration .swift-format Sources Tests
+      - run: scripts/build-app.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: All-In-Gentle.app, path: .build/release/All-In-Gentle.app,
+                if-no-files-found: error, retention-days: 7 }
