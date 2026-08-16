@@ -1,51 +1,6 @@
 import XCTest
 @testable import AllInGentleKit
 
-actor StubEngramSearchProviderActor: EngramSearchProvider {
-    private var results: [MemoryObservation]
-    private var observationsResults: [MemoryObservation]
-    private var sleepDuration: Duration
-    private var thrownError: Error?
-    private(set) var capturedProjectFilter: String?
-    private(set) var capturedObservationsProject: String?
-    private(set) var capturedObservationsLimit: Int?
-    private(set) var capturedSearchQuery: String?
-
-    init(
-        results: [MemoryObservation] = [],
-        observationsResults: [MemoryObservation] = [],
-        sleepDuration: Duration = .seconds(0),
-        thrownError: Error? = nil
-    ) {
-        self.results = results
-        self.observationsResults = observationsResults
-        self.sleepDuration = sleepDuration
-        self.thrownError = thrownError
-    }
-
-    func search(query: String, limit: Int) async throws -> [MemoryObservation] {
-        try await Task.sleep(for: sleepDuration)
-        if let thrownError { throw thrownError }
-        return results
-    }
-
-    func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
-        capturedProjectFilter = project
-        capturedSearchQuery = query
-        try await Task.sleep(for: sleepDuration)
-        if let thrownError { throw thrownError }
-        return results
-    }
-
-    func observations(project: String, limit: Int) async throws -> [MemoryObservation] {
-        capturedObservationsProject = project
-        capturedObservationsLimit = limit
-        try await Task.sleep(for: sleepDuration)
-        if let thrownError { throw thrownError }
-        return observationsResults
-    }
-}
-
 @MainActor
 final class ProjectDetailViewModelTests: XCTestCase {
 
@@ -61,7 +16,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let document = OpenSpecScanner.Document(
             id: "\(projectPath)/spec.md", path: "\(projectPath)/spec.md", title: "Spec")
 
-        let engram = StubEngramSearchProviderActor(results: [memory], observationsResults: [memory])
+        let engram = EngramSearchProviderStub(results: [memory], observationsResults: [memory])
         let scanner = StubOpenSpecScanning(documents: [document])
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
@@ -96,7 +51,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
             tags: []
         )
 
-        let engram = StubEngramSearchProviderActor(results: [memory])
+        let engram = EngramSearchProviderStub(results: [memory])
         let scanner = StubOpenSpecScanning()
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
@@ -138,7 +93,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
 
     func testCancelsInFlightLoadWhenSelectionChanges() async {
         let memoryA = MemoryObservation(id: "a", title: "A", content: "", project: "/projectA", tags: [])
-        let engram = StubEngramSearchProviderActor(results: [memoryA], sleepDuration: .milliseconds(500))
+        let engram = EngramSearchProviderStub(results: [memoryA], sleepDuration: .milliseconds(500))
         let scanner = StubOpenSpecScanning()
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 
@@ -151,7 +106,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
     }
 
     func testErrorsDegradeToErrorMessage() async {
-        let engram = StubEngramSearchProviderActor(thrownError: AllInGentleError.sourceUnavailable("offline"))
+        let engram = EngramSearchProviderStub(thrownError: AllInGentleError.sourceUnavailable("offline"))
         let scanner = StubOpenSpecScanning()
         let viewModel = ProjectDetailViewModel(engram: engram, scanner: scanner)
 

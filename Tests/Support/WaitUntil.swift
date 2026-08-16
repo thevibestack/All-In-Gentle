@@ -6,7 +6,7 @@ import Foundation
 /// `condition` holds; `false` when the deadline expires first.
 public func waitUntil(
     timeout: Duration = .seconds(2),
-    condition: @escaping @MainActor () -> Bool
+    condition: @escaping @MainActor () async -> Bool
 ) async -> Bool {
     let clock = ContinuousClock()
     let deadline = clock.now.advanced(by: timeout)

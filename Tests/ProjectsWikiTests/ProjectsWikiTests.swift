@@ -11,28 +11,55 @@ struct StubProjectSourceProvider: ProjectSourceProvider {
     }
 }
 
-final class StubEngramSearchProvider: EngramSearchProvider, @unchecked Sendable {
-    var results: [MemoryObservation] = []
-    var observationsResults: [MemoryObservation] = []
-    var lastQuery: String?
-    var lastProject: String?
-    var lastObservationsProject: String?
-    var lastObservationsLimit: Int?
+actor EngramSearchProviderStub: EngramSearchProvider {
+    private var results: [MemoryObservation]
+    private var observationsResults: [MemoryObservation]
+    private var sleepDuration: Duration
+    private var thrownError: Error?
+    private(set) var lastQuery: String?
+    private(set) var lastProject: String?
+    private(set) var capturedProjectFilter: String?
+    private(set) var capturedSearchQuery: String?
+    private(set) var capturedObservationsProject: String?
+    private(set) var capturedObservationsLimit: Int?
+
+    init(
+        results: [MemoryObservation] = [],
+        observationsResults: [MemoryObservation] = [],
+        sleepDuration: Duration = .seconds(0),
+        thrownError: Error? = nil
+    ) {
+        self.results = results
+        self.observationsResults = observationsResults
+        self.sleepDuration = sleepDuration
+        self.thrownError = thrownError
+    }
 
     func search(query: String, limit: Int) async throws -> [MemoryObservation] {
+        try await Task.sleep(for: sleepDuration)
+        if let thrownError { throw thrownError }
         lastQuery = query
         return results
     }
 
     func search(query: String, limit: Int, project: String?) async throws -> [MemoryObservation] {
+        capturedProjectFilter = project
+        capturedSearchQuery = query
         lastQuery = query
         lastProject = project
+        try await Task.sleep(for: sleepDuration)
+        if let thrownError { throw thrownError }
+        if let project {
+            return results.filter { $0.project == project }
+        }
         return results
     }
 
     func observations(project: String, limit: Int) async throws -> [MemoryObservation] {
-        lastObservationsProject = project
-        lastObservationsLimit = limit
+        capturedObservationsProject = project
+        capturedObservationsLimit = limit
+        try await Task.sleep(for: sleepDuration)
+        if let thrownError { throw thrownError }
         return observationsResults
     }
 }
@@ -128,11 +155,10 @@ final class ProjectsWikiTests: XCTestCase {
             id: "m1",
             title: "Found",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let scanner = StubOpenSpecScanning()
         let viewModel = WikiViewModel(
             engram: engram,
@@ -151,7 +177,8 @@ final class ProjectsWikiTests: XCTestCase {
         XCTAssertTrue(filled)
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.title, "Found")
-        XCTAssertEqual(engram.lastProject, "/projects/p1")
+        let lastProject = await engram.lastProject
+        XCTAssertEqual(lastProject, "/projects/p1")
         XCTAssertFalse(viewModel.isSearching)
     }
 
@@ -160,11 +187,10 @@ final class ProjectsWikiTests: XCTestCase {
             id: "m1",
             title: "Found",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let scanner = StubOpenSpecScanning()
         let viewModel = WikiViewModel(
             engram: engram,
@@ -198,7 +224,7 @@ final class ProjectsWikiTests: XCTestCase {
             preview: "# OpenSpec Preview"
         )
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
 

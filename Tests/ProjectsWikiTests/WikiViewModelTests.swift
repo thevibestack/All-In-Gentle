@@ -15,7 +15,7 @@ final class WikiViewModelTests: XCTestCase {
         ]
         let scanner = StubOpenSpecScanning(documents: docs)
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
 
@@ -35,7 +35,7 @@ final class WikiViewModelTests: XCTestCase {
             preview: "preview"
         )
         let viewModel = WikiViewModel(
-            engram: StubEngramSearchProvider(),
+            engram: EngramSearchProviderStub(),
             scanner: scanner
         )
         viewModel.loadDocuments(forProjectPath: "/tmp")
@@ -68,11 +68,10 @@ final class WikiViewModelTests: XCTestCase {
             id: "m1",
             title: "Match",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let viewModel = WikiViewModel(
             engram: engram,
             scanner: StubOpenSpecScanning()
@@ -85,8 +84,10 @@ final class WikiViewModelTests: XCTestCase {
         }
         XCTAssertTrue(filled)
 
-        XCTAssertEqual(engram.lastQuery, "match")
-        XCTAssertEqual(engram.lastProject, "/projects/p1")
+        let lastQuery = await engram.lastQuery
+        let lastProject = await engram.lastProject
+        XCTAssertEqual(lastQuery, "match")
+        XCTAssertEqual(lastProject, "/projects/p1")
         XCTAssertEqual(viewModel.results.count, 1)
         XCTAssertEqual(viewModel.results.first?.id, "m1")
     }
@@ -96,11 +97,10 @@ final class WikiViewModelTests: XCTestCase {
             id: "m1",
             title: "Match",
             content: "Content",
-            project: "p1",
+            project: "/projects/p1",
             tags: []
         )
-        let engram = StubEngramSearchProvider()
-        engram.results = [observation]
+        let engram = EngramSearchProviderStub(results: [observation])
         let viewModel = WikiViewModel(
             engram: engram,
             scanner: StubOpenSpecScanning(),
@@ -115,12 +115,14 @@ final class WikiViewModelTests: XCTestCase {
 
         XCTAssertTrue(filled, "search must run without debounce delay when searchDebounce is .zero")
         XCTAssertEqual(viewModel.results.first?.id, "m1")
-        XCTAssertEqual(engram.lastQuery, "match")
+        let lastQuery = await engram.lastQuery
+        XCTAssertEqual(lastQuery, "match")
     }
 
     func testSearchSkippedWhenNoProjectSelected() async throws {
-        let engram = StubEngramSearchProvider()
-        engram.results = [MemoryObservation(id: "m1", title: "Match", content: "Content", project: nil, tags: [])]
+        let engram = EngramSearchProviderStub(
+            results: [MemoryObservation(id: "m1", title: "Match", content: "Content", project: nil, tags: [])]
+        )
         let viewModel = WikiViewModel(
             engram: engram,
             scanner: StubOpenSpecScanning()
@@ -131,11 +133,12 @@ final class WikiViewModelTests: XCTestCase {
         // No project selected: the search must be skipped. Bounded poll to
         // surface any delayed (incorrect) search within the debounce window.
         let searched = await waitUntil(timeout: .milliseconds(350)) {
-            engram.lastQuery != nil
+            await engram.lastQuery != nil
         }
         XCTAssertFalse(searched)
 
-        XCTAssertNil(engram.lastQuery)
+        let lastQuery = await engram.lastQuery
+        XCTAssertNil(lastQuery)
         XCTAssertTrue(viewModel.results.isEmpty)
         XCTAssertFalse(viewModel.isSearching)
     }
