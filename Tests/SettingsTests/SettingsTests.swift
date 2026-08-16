@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class SettingsTests: XCTestCase {
@@ -24,10 +25,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(config?.model, "deepseek-chat")
         XCTAssertEqual(config?.apiKeyReference, "all-in-gentle.provider.deepseek.api-key")
 
-        let migratedKey = try await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertEqual(migratedKey, "sk-legacy")
 
-        let legacyKeyStillPresent = try await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
+        let legacyKeyStillPresent = await keychain.load(key: ProviderConfigurationMigrator.legacyDeepSeekAccount)
         XCTAssertEqual(legacyKeyStillPresent, "sk-legacy")
     }
 
@@ -56,7 +57,7 @@ final class SettingsTests: XCTestCase {
 
         XCTAssertEqual(store.llmProviderConfiguration?.displayName, "Custom")
 
-        let migratedKey = try await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
+        let migratedKey = await keychain.load(key: "all-in-gentle.provider.deepseek.api-key")
         XCTAssertNil(migratedKey)
     }
 
@@ -92,7 +93,6 @@ final class SettingsTests: XCTestCase {
         let appState = AppState(preferences: store, migrator: migrator)
         XCTAssertEqual(appState.selectedItem, .projects)
     }
-
     // MARK: - Connection test (F9)
 
     func testConnectionSuccessUsesDraftConfigAndRestoresKeychain() async throws {
@@ -101,7 +101,7 @@ final class SettingsTests: XCTestCase {
         try await keychain.save(key: config.apiKeyAccount, value: "sk-old")
 
         var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             capturedRequest = request
             let body = [
                 "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"},\"finish_reason\":\"stop\"}]}",
@@ -156,7 +156,7 @@ final class SettingsTests: XCTestCase {
         let keychain = MockKeychain()
         try await keychain.save(key: config.apiKeyAccount, value: "sk-old")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 401,
@@ -182,7 +182,7 @@ final class SettingsTests: XCTestCase {
         let config = LLMProviderConfiguration.deepseekDefault(id: "conn-test")
         let keychain = MockKeychain()
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.box.set { request in
             let body = "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"},\"finish_reason\":\"stop\"}]}\n"
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -241,12 +241,6 @@ final class SettingsTests: XCTestCase {
         XCTAssertNil(store.llmProviderConfiguration)
     }
 
-    // MARK: - Helpers
-
-    private func makeEphemeralDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "settings-tests-\(UUID().uuidString)")!
-    }
-
     private func makeMockURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -297,36 +291,4 @@ private final class MockURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-private actor MockKeychain: KeychainStoring {
-    private var storage: [String: String] = [:]
-    private var failNextSave = false
-    private var failNextLoad = false
-
-    func setFailNextSave() {
-        failNextSave = true
-    }
-
-    func setFailNextLoad() {
-        failNextLoad = true
-    }
-
-    func save(key: String, value: String) throws {
-        if failNextSave {
-            failNextSave = false
-            throw AllInGentleError.persistenceFailure("Mock keychain save failure")
-        }
-        storage[key] = value
-    }
-
-    func load(key: String) throws -> String? {
-        if failNextLoad {
-            failNextLoad = false
-            throw AllInGentleError.persistenceFailure("Mock keychain load failure")
-        }
-        return storage[key]
-    }
-
-    func delete(key: String) throws {
-        storage[key] = nil
-    }
 }

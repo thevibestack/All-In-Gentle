@@ -2,52 +2,7 @@ import Foundation
 import SQLite3
 import XCTest
 @testable import AllInGentleKit
-
-// MARK: - Mock transport
-
-/// Per-instance handler box shared with `MockURLProtocol`.
-///
-/// `URLSession` instantiates `URLProtocol` subclasses via
-/// `init(request:cachedResponse:client:)`, so the handler cannot be injected
-/// through an initializer. A single immutable `static let` reference with
-/// NSLock-guarded interior mutability avoids the `nonisolated(unsafe) static
-/// var` data-race pattern (F22): the box is a constant, not a mutable static.
-private final class HandlerBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-
-    func set(_ handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)) {
-        lock.withLock { self.handler = handler }
-    }
-
-    func call(_ request: URLRequest) throws -> (HTTPURLResponse, Data) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let handler else { throw URLError(.resourceUnavailable) }
-        return try handler(request)
-    }
-}
-
-private final class MockURLProtocol: URLProtocol {
-    static let box = HandlerBox()
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        do {
-            let (response, data) = try Self.box.call(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
-}
+import AllInGentleTestSupport
 
 final class IntegrationTests: XCTestCase {
     private var engramBaseURL: URL {

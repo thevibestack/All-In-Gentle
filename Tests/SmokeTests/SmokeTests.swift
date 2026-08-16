@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class SmokeTests: XCTestCase {
@@ -97,11 +98,5 @@ final class SmokeTests: XCTestCase {
         let store = PreferencesStore(defaults: makeEphemeralDefaults())
         store.set(true, for: .onboardingDismissed)
         XCTAssertTrue(store.bool(for: .onboardingDismissed))
-    }
-
-    // MARK: - Helpers
-
-    private func makeEphemeralDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "smoke-tests-\(UUID().uuidString)")!
     }
 }

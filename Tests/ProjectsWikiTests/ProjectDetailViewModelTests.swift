@@ -1,5 +1,6 @@
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class ProjectDetailViewModelTests: XCTestCase {

@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "AllInGentleKit", targets: ["AllInGentleKit"]),
-        .executable(name: "AllInGentle", targets: ["AllInGentle"])
+        .executable(name: "AllInGentle", targets: ["AllInGentle"]),
     ],
     dependencies: [
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui.git", from: "2.4.0")
@@ -42,7 +42,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LLMServiceTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/LLMServiceTests",
             resources: [.process("Fixtures")]
         ),
@@ -53,7 +53,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ServicesTokensTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/ServicesTokensTests"
         ),
         .testTarget(
@@ -63,12 +63,12 @@ let package = Package(
         ),
         .testTarget(
             name: "IntegrationTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/IntegrationTests"
         ),
         .testTarget(
             name: "SmokeTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/SmokeTests"
         ),
         .testTarget(
@@ -78,7 +78,7 @@ let package = Package(
         ),
         .testTarget(
             name: "SettingsTests",
-            dependencies: ["AllInGentleKit"],
+            dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/SettingsTests"
         ),
     ]

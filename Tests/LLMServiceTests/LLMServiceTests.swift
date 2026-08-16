@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import AllInGentleKit
+import AllInGentleTestSupport
 
 @MainActor
 final class LLMServiceTests: XCTestCase {
@@ -223,7 +224,7 @@ final class LLMServiceTests: XCTestCase {
         XCTAssertFalse(viewModel.isStreaming)
     }
 
-    func testDeepSeekProviderSurfacesKeychainError() async throws {
+        func testDeepSeekProviderSurfacesKeychainError() async throws {
         let config = LLMProviderConfiguration.deepseekDefault(id: "test")
         let keychain = MockKeychain()
         await keychain.setFailNextLoad()
@@ -247,11 +248,7 @@ final class LLMServiceTests: XCTestCase {
         }
     }
 
-    // MARK: - Helpers
-
-    private func makeEphemeralDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "llm-service-tests-\(UUID().uuidString)")!
-    }
+// MARK: - Helpers
 
     private func makeMockURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
@@ -277,82 +274,4 @@ final class LLMServiceTests: XCTestCase {
         stream.close()
         return data as Data
     }
-}
-
-private actor MockKeychain: KeychainStoring {
-    private var storage: [String: String] = [:]
-    private var failNextSave = false
-    private var failNextLoad = false
-
-    func setFailNextSave() {
-        failNextSave = true
-    }
-
-    func setFailNextLoad() {
-        failNextLoad = true
-    }
-
-    func save(key: String, value: String) throws {
-        if failNextSave {
-            failNextSave = false
-            throw AllInGentleError.persistenceFailure("Mock keychain save failure")
-        }
-        storage[key] = value
-    }
-
-    func load(key: String) throws -> String? {
-        if failNextLoad {
-            failNextLoad = false
-            throw AllInGentleError.persistenceFailure("Mock keychain load failure")
-        }
-        return storage[key]
-    }
-
-    func delete(key: String) throws {
-        storage[key] = nil
-    }
-}
-
-/// Per-instance handler box shared with `MockURLProtocol`.
-///
-/// `URLSession` instantiates `URLProtocol` subclasses via
-/// `init(request:cachedResponse:client:)`, so the handler cannot be injected
-/// through an initializer. A single immutable `static let` reference with
-/// NSLock-guarded interior mutability avoids the `nonisolated(unsafe) static
-/// var` data-race pattern (F22): the box is a constant, not a mutable static.
-private final class HandlerBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-
-    func set(_ handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)) {
-        lock.withLock { self.handler = handler }
-    }
-
-    func call(_ request: URLRequest) throws -> (HTTPURLResponse, Data) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let handler else { throw URLError(.resourceUnavailable) }
-        return try handler(request)
-    }
-}
-
-private final class MockURLProtocol: URLProtocol {
-    static let box = HandlerBox()
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        do {
-            let (response, data) = try Self.box.call(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
 }
