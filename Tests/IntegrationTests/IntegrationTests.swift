@@ -143,7 +143,8 @@ final class IntegrationTests: XCTestCase {
             page2.map(\.id), ["s2"],
             "Tie-break branch (time_updated = ? AND id < ?) must continue onto the same timestamp"
         )
-        XCTAssertEqual(page2[0].rawTimeUpdated, cursor1.timeUpdated, "Cursor continuity: same time_updated, id advances")
+        XCTAssertEqual(
+            page2[0].rawTimeUpdated, cursor1.timeUpdated, "Cursor continuity: same time_updated, id advances")
 
         let cursor2 = TokenCursor(timeUpdated: page2[0].rawTimeUpdated!, id: page2[0].id)
         let page3 = try await client.tokenUsagePage(after: cursor2, limit: 1)
