@@ -113,4 +113,14 @@ final class ClientTests: XCTestCase {
         XCTAssertNotNil(statuses)
         XCTAssertEqual(statuses?.first?.id, "engram")
     }
+
+    func testMakeAppDefaultSetsTimeoutsAndConnectivity() {
+        let configuration = URLSessionConfiguration.makeAppDefault()
+
+        XCTAssertEqual(configuration.timeoutIntervalForRequest, 30)
+        XCTAssertEqual(configuration.timeoutIntervalForResource, 600)
+        XCTAssertTrue(configuration.waitsForConnectivity)
+        XCTAssertEqual(configuration.httpMaximumConnectionsPerHost, 4)
+        XCTAssertEqual(configuration.urlCache?.diskCapacity, 0, "Ephemeral base must not use an on-disk cache")
+    }
 }

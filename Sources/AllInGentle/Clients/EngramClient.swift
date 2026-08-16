@@ -22,7 +22,7 @@ public actor EngramClient {
 
     public init(
         baseURL: URL = URL(string: "http://127.0.0.1:7437")!,
-        urlSession: URLSession = .shared
+        urlSession: URLSession = URLSession(configuration: .makeAppDefault())
     ) {
         self.baseURL = baseURL
         self.urlSession = urlSession
