@@ -103,22 +103,15 @@ public actor OpenCodeClient {
             """
         )
         return rows.compactMap { row in
-            guard let id = row.text(0),
-                let project = row.text(1),
-                let title = row.text(2)
-            else { return nil }
-            let cost = displayDouble(row, 3) ?? 0
-            let input = displayInt(row, 4) ?? 0
-            let output = displayInt(row, 5) ?? 0
-            let date = row.millis(6).map { millisToDate($0) } ?? Date()
+            guard let fields = parseSessionFields(row) else { return nil }
             return SessionSummary(
-                id: id,
-                project: project,
-                sessionName: title,
+                id: fields.id,
+                project: fields.project,
+                sessionName: fields.title,
                 messageCount: 0,
-                totalTokens: input + output,
-                estimatedCost: cost,
-                latestDate: date
+                totalTokens: fields.input + fields.output,
+                estimatedCost: fields.cost,
+                latestDate: fields.date
             )
         }
     }
@@ -135,24 +128,16 @@ public actor OpenCodeClient {
             bind: [.int64(Int64(clamped))]
         )
         return rows.compactMap { row in
-            guard let id = row.text(0),
-                let project = row.text(1),
-                let session = row.text(2)
-            else { return nil }
-            let cost = displayDouble(row, 3) ?? 0
-            let input = displayInt(row, 4) ?? 0
-            let output = displayInt(row, 5) ?? 0
-            let timeUpdated = row.millis(6)
-            let date = timeUpdated.map { millisToDate($0) } ?? Date()
+            guard let fields = parseSessionFields(row) else { return nil }
             return TokenUsage(
-                id: id,
-                project: project,
-                session: session,
-                promptTokens: input,
-                completionTokens: output,
-                estimatedCost: cost,
-                timestamp: date,
-                rawTimeUpdated: timeUpdated
+                id: fields.id,
+                project: fields.project,
+                session: fields.title,
+                promptTokens: fields.input,
+                completionTokens: fields.output,
+                estimatedCost: fields.cost,
+                timestamp: fields.date,
+                rawTimeUpdated: fields.timeUpdated
             )
         }
     }
@@ -187,30 +172,18 @@ public actor OpenCodeClient {
         }
         let rows = try executeReadOnly(sql, bind: bind)
         return rows.compactMap { row in
-            guard let id = row.text(0),
-                let project = row.text(1),
-                let session = row.text(2),
-                let timeUpdated = row.millis(6),
-                timeUpdated.isFinite
-            else { return nil }
-            let cost = displayDouble(row, 3) ?? 0
-            let input = displayInt(row, 4) ?? 0
-            let output = displayInt(row, 5) ?? 0
+            guard let fields = parseSessionFields(row) else { return nil }
             return TokenUsage(
-                id: id,
-                project: project,
-                session: session,
-                promptTokens: input,
-                completionTokens: output,
-                estimatedCost: cost,
-                timestamp: millisToDate(timeUpdated),
-                rawTimeUpdated: timeUpdated
+                id: fields.id,
+                project: fields.project,
+                session: fields.title,
+                promptTokens: fields.input,
+                completionTokens: fields.output,
+                estimatedCost: fields.cost,
+                timestamp: fields.date,
+                rawTimeUpdated: fields.timeUpdated
             )
         }
-    }
-
-    private func escapeSQLString(_ value: String) -> String {
-        value.replacingOccurrences(of: "'", with: "''")
     }
 
     internal func executeReadOnly(_ sql: String, bind values: [SQLiteValue] = []) throws -> [SQLiteRow] {
@@ -281,18 +254,40 @@ public actor OpenCodeClient {
         }
     }
 
-    private func displayDouble(_ row: SQLiteRow, _ index: Int) -> Double? {
-        switch row[index] {
-        case .null: return nil
+    /// Applies the single drop-row policy shared by `sessionSummaries`, `tokenUsage`, and
+    /// `tokenUsagePage`: NULL or unparseable identity/time_updated drops the row; NULL
+    /// display numerics become 0; unparseable display numerics drop the row; the date is
+    /// always derived from `time_updated`, never fabricated.
+    private func parseSessionFields(
+        _ row: SQLiteRow
+    ) -> (
+        id: String, project: String, title: String, cost: Double, input: Int, output: Int, timeUpdated: Double,
+        date: Date
+    )? {
+        guard let id = row.text(0),
+            let project = row.text(1),
+            let title = row.text(2),
+            let timeUpdated = row.millis(6),
+            timeUpdated.isFinite,
+            let cost = displayDouble(row[3]),
+            let input = displayInt(row[4]),
+            let output = displayInt(row[5])
+        else { return nil }
+        return (id, project, title, cost, input, output, timeUpdated, millisToDate(timeUpdated))
+    }
+
+    private func displayDouble(_ column: SQLiteColumn) -> Double? {
+        switch column {
+        case .null: return 0
         case .int64(let value): return Double(value)
         case .double(let value): return value
         case .text(let value): return Double(value)
         }
     }
 
-    private func displayInt(_ row: SQLiteRow, _ index: Int) -> Int? {
-        switch row[index] {
-        case .null: return nil
+    private func displayInt(_ column: SQLiteColumn) -> Int? {
+        switch column {
+        case .null: return 0
         case .int64(let value): return Int(value)
         case .double(let value): return Int(value)
         case .text(let value): return Int(value)
@@ -301,11 +296,6 @@ public actor OpenCodeClient {
 
     private func millisToDate(_ milliseconds: Double) -> Date {
         Date(timeIntervalSince1970: milliseconds / 1000.0)
-    }
-
-    private func parseMillis(_ text: String) -> Date? {
-        guard let value = Double(text) else { return nil }
-        return Date(timeIntervalSince1970: value / 1000.0)
     }
 }
 

@@ -20,26 +20,24 @@ final class ServicesTokensTests: XCTestCase {
     }
 
     func testTokenCursorKeysetCondition() {
-        let cursor = TokenCursor(timeUpdated: 1_700_000_000_000, id: "session-b")
-        let sql = Self.tokenUsagePageSQL(after: cursor, limit: 25)
+        let sql = Self.tokenUsagePageSQL()
 
-        XCTAssertTrue(sql.contains("time_updated <"))
-        XCTAssertTrue(sql.contains("id <"))
+        XCTAssertTrue(sql.contains("time_updated < ?"))
+        XCTAssertTrue(sql.contains("id < ?"))
         XCTAssertTrue(sql.contains("ORDER BY time_updated DESC, id DESC"))
-        XCTAssertTrue(sql.contains("LIMIT 25"))
+        XCTAssertTrue(sql.contains("LIMIT ?"))
     }
 
     // MARK: - Helpers
 
-    private static func tokenUsagePageSQL(after cursor: TokenCursor, limit: Int) -> String {
-        let escapedID = cursor.id.replacingOccurrences(of: "'", with: "''")
-        return """
-            SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
-            FROM session
-            WHERE (time_updated < \(cursor.timeUpdated) OR (time_updated = \(cursor.timeUpdated) AND id < '\(escapedID)'))
-            ORDER BY time_updated DESC, id DESC
-            LIMIT \(limit)
-            """
+    private static func tokenUsagePageSQL() -> String {
+        """
+        SELECT id, project_id, title, cost, tokens_input, tokens_output, time_updated
+        FROM session
+        WHERE (time_updated < ? OR (time_updated = ? AND id < ?))
+        ORDER BY time_updated DESC, id DESC
+        LIMIT ?
+        """
     }
 }
 

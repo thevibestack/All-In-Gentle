@@ -268,6 +268,92 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(second.map(\.id), ["a"], "Keyset resume must return remaining rows in id DESC order (R6)")
     }
 
+    // MARK: - OpenCodeClient unified drop-row policy (F25)
+
+    func testSessionSummariesDropsRowWithNullId() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES (NULL,'p','t1',0.1,10,20,1000);"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let summaries = try await client.sessionSummaries()
+
+        XCTAssertEqual(summaries.count, 0, "NULL id must drop the row (S5)")
+    }
+
+    func testSessionSummariesDropsRowWithNullTimeUpdated() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,NULL);"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let summaries = try await client.sessionSummaries()
+
+        XCTAssertEqual(summaries.count, 0, "NULL time_updated must drop the row, never fabricate Date() (S5/S6)")
+    }
+
+    func testSessionSummariesDropsRowWithUnparseableTimeUpdated() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,'abc');"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let summaries = try await client.sessionSummaries()
+
+        XCTAssertEqual(summaries.count, 0, "Unparseable time_updated must drop the row (S7)")
+    }
+
+    func testTokenUsageDropsRowWithUnparseableTimeUpdated() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,'abc');"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let usage = try await client.tokenUsage()
+
+        XCTAssertEqual(usage.count, 0, "Unparseable time_updated must drop the row in tokenUsage too (S7)")
+    }
+
+    func testTokenUsageNullCostBecomesZeroWithDateFromSeed() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',NULL,10,20,2000);"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let usage = try await client.tokenUsage()
+
+        XCTAssertEqual(usage.count, 1)
+        XCTAssertEqual(usage.first?.estimatedCost, 0, "NULL cost must materialize as 0 (S6)")
+        XCTAssertEqual(
+            usage.first?.timestamp, Date(timeIntervalSince1970: 2.0),
+            "Date must derive from seeded time_updated, not now (S6)")
+    }
+
+    func testTokenUsagePageDropsRowWithUnparseableCost() async throws {
+        var seed = Self.sessionSeed
+        seed += "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,1000);"
+        seed += "INSERT INTO session VALUES ('s2','p','t2','abc',10,20,2000);"
+        seed += "INSERT INTO session VALUES ('s3','p','t3',0.3,10,20,3000);"
+        let (client, tempURL) = makeClient(seedSQL: seed)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let page = try await client.tokenUsagePage(limit: 3)
+
+        XCTAssertEqual(page.count, 2, "Unparseable cost must drop the row, shortening the page (S11)")
+        XCTAssertFalse(page.contains { $0.id == "s2" }, "Corrupt row must not appear (S11)")
+    }
+
+    func testTokenUsagePageDropsRowWithUnparseableTimeUpdated() async throws {
+        let (client, tempURL) = makeClient(
+            seedSQL: Self.sessionSeed + "INSERT INTO session VALUES ('s1','p','t1',0.1,10,20,'abc');"
+        )
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let page = try await client.tokenUsagePage(limit: 10)
+
+        XCTAssertEqual(page.count, 0, "Unparseable time_updated must drop the row in tokenUsagePage too (S7)")
+    }
+
     func testProcessMonitorCanStartMonitoringSequence() async {
         let runner = CapturingProcessRunner()
         await runner.setNextOutput("")
