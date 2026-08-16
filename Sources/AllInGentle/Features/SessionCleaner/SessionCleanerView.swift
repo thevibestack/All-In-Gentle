@@ -59,9 +59,9 @@ private struct SessionGroupRow: View {
             }
 
             HStack(spacing: AGSpacing.large) {
-                LabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
-                LabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
-                LabeledValue(
+                AGLabeledValue(label: L("sessionCleaner.tokens"), value: "\(group.totalTokens)")
+                AGLabeledValue(label: L("sessionCleaner.cost"), value: String(format: "%.4f", group.totalCost))
+                AGLabeledValue(
                     label: L("sessionCleaner.latest"),
                     value: group.latestDate.formatted(date: .abbreviated, time: .omitted))
             }
@@ -94,23 +94,6 @@ private struct SessionGroupRow: View {
                 .font(AGTypography.caption)
                 .foregroundStyle(AGColors.textSecondary)
             }
-        }
-    }
-}
-
-private struct LabeledValue: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
-            Text(label)
-                .font(AGTypography.caption)
-                .foregroundStyle(AGColors.textSecondary)
-            Text(value)
-                .font(AGTypography.body)
-                .foregroundStyle(AGColors.textPrimary)
-                .monospacedDigit()
         }
     }
 }

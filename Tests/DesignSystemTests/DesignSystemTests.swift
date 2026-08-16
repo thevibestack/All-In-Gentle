@@ -134,4 +134,13 @@ final class DesignSystemTests: XCTestCase {
         focusBinding.wrappedValue = true
         XCTAssertTrue(focused)
     }
+
+    // MARK: - Labeled value
+
+    func testAGLabeledValueHoldsLabelAndValue() {
+        let view = AGLabeledValue(label: "PID", value: "42")
+
+        XCTAssertEqual(view.label, "PID")
+        XCTAssertEqual(view.value, "42")
+    }
 }

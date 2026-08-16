@@ -59,13 +59,13 @@ private struct ServiceRow: View {
 
             HStack(spacing: AGSpacing.large) {
                 if let pid = status.pid {
-                    LabeledValue(label: L("services.pid"), value: String(pid))
+                    AGLabeledValue(label: L("services.pid"), value: String(pid))
                 }
                 if let port = status.port {
-                    LabeledValue(label: L("services.port"), value: String(port))
+                    AGLabeledValue(label: L("services.port"), value: String(port))
                 }
                 if let uptime = status.uptime {
-                    LabeledValue(label: L("services.uptime"), value: formatUptime(uptime))
+                    AGLabeledValue(label: L("services.uptime"), value: formatUptime(uptime))
                 }
             }
 
@@ -75,22 +75,6 @@ private struct ServiceRow: View {
                     .foregroundStyle(AGColors.statusError)
                     .lineLimit(2)
             }
-        }
-    }
-}
-
-private struct LabeledValue: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
-            Text(label)
-                .font(AGTypography.caption)
-                .foregroundStyle(AGColors.textSecondary)
-            Text(value)
-                .font(AGTypography.body)
-                .foregroundStyle(AGColors.textPrimary)
         }
     }
 }
