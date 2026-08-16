@@ -303,7 +303,12 @@ public final class ChatViewModel {
         var assistantMessage: ChatMessage?
         var responseText = ""
 
-        generationTask = Task {
+        generationTask = Task { [weak self] in
+            // Weak capture only: a top-level `guard let self` would re-retain
+            // the view model for the whole task and keep it alive while the
+            // stream hangs. Copy the dependency out, then access `self`
+            // per-call so the task holds the view model only momentarily.
+            guard let service = self?.service else { return }
             do {
                 let stream = try await service.stream(messages: session.messages)
                 for try await chunk in stream {
@@ -317,12 +322,12 @@ public final class ChatViewModel {
                                 content: responseText
                             )
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: sessionID, message: message)
+                                self?.appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         } else {
                             assistantMessage?.content = responseText
                             if let message = assistantMessage {
-                                appendOrUpdateMessage(in: sessionID, message: message)
+                                self?.appendOrUpdateMessage(in: sessionID, message: message)
                             }
                         }
                     }
@@ -330,20 +335,23 @@ public final class ChatViewModel {
                         break
                     }
                 }
-                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
+                await self?.finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch is CancellationError {
-                await finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
+                await self?.finalizeSession(sessionID: sessionID, assistantMessage: assistantMessage)
             } catch {
-                await removeEmptyAssistantMessage(sessionID: sessionID, assistantMessage: assistantMessage)
-                await MainActor.run { self.errorMessage = error.localizedDescription }
+                await self?.removeEmptyAssistantMessage(sessionID: sessionID, assistantMessage: assistantMessage)
+                await MainActor.run { self?.errorMessage = error.localizedDescription }
             }
             await MainActor.run {
-                self.isStreaming = false
-                self.generationTask = nil
+                self?.isStreaming = false
+                self?.generationTask = nil
             }
         }
 
-        await generationTask?.value
+        // Deliberately not awaited: an async method's frame retains `self` for
+        // the whole call, so `await generationTask?.value` would keep the view
+        // model alive while the stream is in flight, defeating the weak-capture
+        // contract above. Callers observe completion via `isStreaming`.
     }
 
     // MARK: - Private helpers
