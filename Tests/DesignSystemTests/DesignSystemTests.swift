@@ -95,29 +95,9 @@ final class DesignSystemTests: XCTestCase {
 
     // MARK: - Status badge
 
-    func testAGStatusBadgeCanBeConstructedFromInteractionState() {
-        let badge = AGStatusBadge(interactionState: .placeholder)
-        XCTAssertEqual(badge.status, .placeholder)
-    }
-
     func testAGStatusBadgeErrorCaseExists() {
         let badge = AGStatusBadge(status: .error)
         XCTAssertEqual(badge.status.catalogKey, "ds.badge.error")
-    }
-
-    func testAGStatusMappingMatrix() {
-        let expectations: [(InteractionState, AGStatus, String)] = [
-            (.live, .live, "badge.live"),
-            (.placeholder, .placeholder, "badge.placeholder"),
-            (.disabled, .disabled, "badge.disabled"),
-        ]
-        for (state, expectedStatus, expectedKey) in expectations {
-            let status = AGStatus(state)
-            XCTAssertEqual(status, expectedStatus, "AGStatus(\(state.rawValue)) must mirror the state")
-            XCTAssertEqual(status.catalogKey, expectedKey)
-        }
-        // .error has no InteractionState counterpart.
-        XCTAssertEqual(AGStatus.allCases.count, InteractionState.allCases.count + 1)
     }
 
     func testAGStatusCatalogKeys() {

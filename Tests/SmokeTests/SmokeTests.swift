@@ -5,25 +5,6 @@ import XCTest
 
 @MainActor
 final class SmokeTests: XCTestCase {
-    // MARK: - Interaction-state badges
-
-    func testInteractionStateCatalogKeys() {
-        XCTAssertEqual(InteractionState.live.catalogKey, "badge.live")
-        XCTAssertEqual(InteractionState.placeholder.catalogKey, "badge.placeholder")
-        XCTAssertEqual(InteractionState.disabled.catalogKey, "badge.disabled")
-    }
-
-    func testInteractionStateBadgeLabels() {
-        XCTAssertEqual(InteractionState.live.label, L(InteractionState.live.catalogKey))
-        XCTAssertEqual(InteractionState.placeholder.label, L(InteractionState.placeholder.catalogKey))
-        XCTAssertEqual(InteractionState.disabled.label, L(InteractionState.disabled.catalogKey))
-    }
-
-    func testPlaceholderBadgeCanBeConstructed() {
-        let badge = InteractionStateBadge(state: .placeholder)
-        XCTAssertNotNil(badge)
-    }
-
     // MARK: - Sidebar destinations
 
     func testAllSixSidebarItemsAreDefined() {

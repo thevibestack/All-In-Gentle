@@ -2,7 +2,6 @@ import SwiftUI
 
 public struct AllInGentleApp: App {
     @State private var appState = AppState()
-    @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
 
@@ -76,7 +75,6 @@ public struct AllInGentleApp: App {
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,9 +112,6 @@ struct RootView: View {
                 .frame(minWidth: 180, idealWidth: 240, maxWidth: 320)
                 .accessibilityIdentifier("shell.searchField")
             }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            appState.scenePhase = newPhase
         }
     }
 

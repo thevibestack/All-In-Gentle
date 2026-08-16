@@ -18,12 +18,6 @@ public final class AppState {
         }
     }
 
-    /// Health snapshot for monitored services keyed by service identifier.
-    public var servicesHealthSnapshot: [String: ServiceHealthSnapshot] = [:]
-
-    /// Current scene phase, updated by the root view.
-    public var scenePhase: ScenePhase = .background
-
     /// Global search query bound to the toolbar search field.
     public var globalSearchQuery: String = ""
 

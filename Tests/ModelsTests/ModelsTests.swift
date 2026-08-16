@@ -137,24 +137,6 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(usage.totalTokens, 0)
     }
 
-    // MARK: - InteractionState catalog keys
-
-    func testInteractionStateCatalogKeyMapping() {
-        let expectations: [(InteractionState, String)] = [
-            (.live, "badge.live"),
-            (.placeholder, "badge.placeholder"),
-            (.disabled, "badge.disabled"),
-        ]
-        for (state, key) in expectations {
-            XCTAssertEqual(state.catalogKey, key)
-        }
-    }
-
-    func testInteractionStateCatalogKeysUnique() {
-        let keys = InteractionState.allCases.map(\.catalogKey)
-        XCTAssertEqual(Set(keys).count, 3)
-    }
-
     // MARK: - AllInGentleError Equatable
 
     func testAllInGentleErrorEquatableEqual() {
@@ -177,7 +159,6 @@ final class ModelsTests: XCTestCase {
             SessionSummary(
                 id: "ss1", project: "p1", sessionName: "S", messageCount: 1, totalTokens: 2, estimatedCost: 0.0))
         assertSendable(ChatMessage(id: "c1", role: .user, content: "hi"))
-        assertSendable(InteractionState.live)
         assertSendable(AllInGentleError.sourceUnavailable("gate"))
     }
 
