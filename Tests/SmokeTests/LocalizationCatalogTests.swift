@@ -39,8 +39,8 @@ final class LocalizationCatalogTests: XCTestCase {
         let es = try catalog(for: "es")
 
         XCTAssertEqual(Set(en.keys), Set(es.keys), "en and es catalogs must define the same keys")
-        XCTAssertEqual(en.count, 160, "en catalog must keep 160 keys")
-        XCTAssertEqual(es.count, 160, "es catalog must keep 160 keys")
+        XCTAssertEqual(en.count, 166, "en catalog must keep 166 keys")
+        XCTAssertEqual(es.count, 166, "es catalog must keep 166 keys")
     }
 
     // MARK: - Helpers

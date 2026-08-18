@@ -229,8 +229,8 @@ final class ModelsTests: XCTestCase {
         let es = try XCTUnwrap(catalog(for: "es", in: bundle), "es.lproj catalog not found")
 
         XCTAssertEqual(Set(en.keys), Set(es.keys))
-        XCTAssertEqual(en.count, 160)
-        XCTAssertEqual(es.count, 160)
+        XCTAssertEqual(en.count, 166)
+        XCTAssertEqual(es.count, 166)
     }
 
     // MARK: - Helpers (F3)

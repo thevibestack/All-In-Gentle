@@ -153,7 +153,13 @@
 "dashboard.card.battery.title" = "Batería";
 "dashboard.card.services.title" = "Servicios";
 "dashboard.services.running" = "%d/%d en ejecución";
-"dashboard.card.empty" = "Sin datos";
+"dashboard.card.ram.swap" = "Intercambio: %@ / %@";
+"dashboard.card.gpu.unavailable.title" = "GPU no disponible";
+"dashboard.card.gpu.unavailable.message" = "Este Mac no expone estadísticas de uso de GPU.";
+"dashboard.card.network.interface" = "Interfaz: %@";
+"dashboard.card.network.rates" = "↓ %@  ↑ %@";
+"dashboard.card.battery.cycles" = "Ciclos: %d";
+"dashboard.card.battery.charging" = "Cargando";
 
 "errors.readOnlyViolation" = "Esta acción es de solo lectura y no se puede realizar.";
 "errors.sourceUnavailable" = "Una fuente de datos no está disponible: %@";

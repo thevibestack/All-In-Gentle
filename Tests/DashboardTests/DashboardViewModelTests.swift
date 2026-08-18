@@ -103,7 +103,8 @@ final class DashboardViewModelTests: XCTestCase {
 }
 
 /// Fixture reader: CPU/RAM/network present, GPU/battery unavailable.
-private actor MixedMetrics: SystemMetricsProviding {
+/// Internal so the card render tests share the same hermetic fixtures.
+actor MixedMetrics: SystemMetricsProviding {
     func cpu() async -> CPUSnapshot? {
         CPUSnapshot(total: 33.0, system: 11.0, user: 22.0, perCore: [33.0])
     }
@@ -126,7 +127,7 @@ private actor MixedMetrics: SystemMetricsProviding {
 }
 
 /// Stub process runner returning canned ps/lsof output (hermetic DC-6).
-private struct StubProcessRunner: ProcessRunning {
+struct StubProcessRunner: ProcessRunning {
     let psOutput: String
     let lsofOutput: String
 
@@ -136,7 +137,7 @@ private struct StubProcessRunner: ProcessRunning {
 }
 
 /// Fixture reader where every metric is unavailable (G-5).
-private struct AllNilMetrics: SystemMetricsProviding {
+struct AllNilMetrics: SystemMetricsProviding {
     func cpu() async -> CPUSnapshot? { nil }
     func ram() async -> RAMSnapshot? { nil }
     func gpu() async -> GPUSnapshot? { nil }

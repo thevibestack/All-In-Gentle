@@ -7,8 +7,7 @@ func dashboardGridColumns() -> [GridItem] {
 }
 
 /// Home dashboard shell (DS-2/DS-3): NavigationStack → ScrollView →
-/// adaptive LazyVGrid of DashboardCards. Card bodies are minimal live
-/// summaries; full widget compositions land with the cards phase (PR 6).
+/// adaptive LazyVGrid of the six metric cards.
 struct DashboardView: View {
     let viewModel: DashboardViewModel
 
@@ -19,59 +18,37 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: dashboardGridColumns(), alignment: .leading, spacing: AGSpacing.medium) {
-                    metricCard(
-                        "dashboard.card.cpu.title", viewModel.cardPhase(viewModel.cpu),
-                        viewModel.cpu.map { "\(Int($0.total.rounded()))%" })
-                    metricCard(
-                        "dashboard.card.ram.title", viewModel.cardPhase(viewModel.ram),
-                        viewModel.ram.map { "\(formatBytes($0.usedBytes)) / \(formatBytes($0.totalBytes))" })
-                    metricCard(
-                        "dashboard.card.gpu.title", viewModel.cardPhase(viewModel.gpu),
-                        viewModel.gpu.map { "\(Int($0.utilization.rounded()))%" })
-                    metricCard(
-                        "dashboard.card.network.title", viewModel.cardPhase(viewModel.network),
-                        viewModel.network.map {
-                            "↓ \(formatRate($0.receivedBytesPerSec))  ↑ \(formatRate($0.sentBytesPerSec))"
-                        })
-                    metricCard(
-                        "dashboard.card.battery.title", viewModel.cardPhase(viewModel.battery),
-                        viewModel.battery.map { "\(Int($0.level.rounded()))%" })
-                    metricCard(
-                        "dashboard.card.services.title",
-                        viewModel.serviceStatuses.isEmpty ? .loading : .content,
-                        L("dashboard.services.running", viewModel.runningServiceCount, viewModel.serviceTotal))
-                }
-                .padding(AGSpacing.medium)
+                DashboardGrid(viewModel: viewModel)
+                    .padding(AGSpacing.medium)
             }
             .navigationTitle(L("dashboard.title"))
             .task { viewModel.start() }
             .onDisappear { viewModel.stop() }
         }
     }
+}
 
-    /// Minimal placeholder card: localized title + primary value; spinner
-    /// before the first batch, empty state while a metric is unavailable.
-    private func metricCard(_ titleKey: String, _ phase: DashboardCardPhase, _ value: String?) -> some View {
-        DashboardCard {
-            VStack(alignment: .leading, spacing: AGSpacing.xSmall) {
-                Text(L(titleKey))
-                    .font(AGTypography.headline)
-                    .foregroundStyle(AGColors.textPrimary)
-                switch phase {
-                case .loading:
-                    ProgressView().controlSize(.small)
-                case .empty:
-                    Text(L("dashboard.card.empty"))
-                        .font(AGTypography.body)
-                        .foregroundStyle(AGColors.textSecondary)
-                case .content:
-                    Text(value ?? "")
-                        .font(AGTypography.mono)
-                        .foregroundStyle(AGColors.textPrimary)
-                        .lineLimit(1)
-                }
+/// The six-card grid (DS-3). Extracted from the navigation shell so the card
+/// degradation paths can be rendered headlessly in tests (DC-7/G-5). The
+/// battery card is included only while a battery exists (DC-5).
+struct DashboardGrid: View {
+    let viewModel: DashboardViewModel
+
+    var body: some View {
+        LazyVGrid(columns: dashboardGridColumns(), alignment: .leading, spacing: AGSpacing.medium) {
+            CPUCard(phase: viewModel.cardPhase(viewModel.cpu), cpu: viewModel.cpu, history: viewModel.cpuHistory)
+            RAMCard(phase: viewModel.cardPhase(viewModel.ram), ram: viewModel.ram)
+            GPUCard(phase: viewModel.cardPhase(viewModel.gpu), gpu: viewModel.gpu, history: viewModel.gpuHistory)
+            NetworkCard(
+                phase: viewModel.cardPhase(viewModel.network),
+                network: viewModel.network,
+                downHistory: viewModel.networkDownHistory,
+                upHistory: viewModel.networkUpHistory
+            )
+            if batteryCardVisible(viewModel.battery) {
+                BatteryCard(battery: viewModel.battery)
             }
+            ServicesCard(statuses: viewModel.serviceStatuses)
         }
     }
 }
