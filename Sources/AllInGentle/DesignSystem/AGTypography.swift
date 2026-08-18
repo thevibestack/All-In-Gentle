@@ -35,4 +35,25 @@ public enum AGTypography {
     public static var monoCaption: Font {
         Font.system(.caption, design: .monospaced, weight: .regular)
     }
+
+    // MARK: - Metric numerals (D2)
+
+    /// Metric headline numeral size in points: 28pt semibold SF Mono.
+    ///
+    /// Exposed as a raw `CGFloat` so tests can pin the 28–34pt spec range
+    /// (`Font` itself is opaque and cannot be read back).
+    public static let metricSize: CGFloat = 28
+
+    /// Metric caption size in points: 11pt SF Mono (11–12pt spec range).
+    public static let metricCaptionSize: CGFloat = 11
+
+    /// Large metric numeral — the visual anchor of a dashboard card.
+    public static var metric: Font {
+        Font.system(size: metricSize, weight: .semibold, design: .monospaced)
+    }
+
+    /// Small metric caption for deltas, rates, and secondary values.
+    public static var metricCaption: Font {
+        Font.system(size: metricCaptionSize, weight: .regular, design: .monospaced)
+    }
 }

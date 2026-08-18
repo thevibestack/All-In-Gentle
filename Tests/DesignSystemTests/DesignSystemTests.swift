@@ -89,6 +89,20 @@ final class DesignSystemTests: XCTestCase {
         }
     }
 
+    // MARK: - SF Mono metric typography (D2)
+
+    func testMetricTypographySizesAreInSpecRange() {
+        // Spec D2: headline numeral 28–34pt, metric caption 11–12pt on SF Mono.
+        XCTAssertTrue(
+            (28...34).contains(AGTypography.metricSize),
+            "metricSize \(AGTypography.metricSize) must be in 28...34"
+        )
+        XCTAssertTrue(
+            (11...12).contains(AGTypography.metricCaptionSize),
+            "metricCaptionSize \(AGTypography.metricCaptionSize) must be in 11...12"
+        )
+    }
+
     // MARK: - Helpers
 
     /// Resolves a SwiftUI `Color` token as sRGB under a specific appearance by
