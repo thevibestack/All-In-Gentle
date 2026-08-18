@@ -144,7 +144,7 @@ struct RootView: View {
     private var selectedItemBinding: Binding<AppState.AppTab?> {
         Binding(
             get: { appState.selectedItem },
-            set: { appState.selectedItem = $0 ?? .projects }
+            set: { appState.selectedItem = $0 ?? .dashboard }
         )
     }
 

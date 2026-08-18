@@ -5,7 +5,7 @@ import Observation
 @Observable
 public final class AppState {
     /// Currently selected sidebar destination.
-    public var selectedItem: AppTab = .projects
+    public var selectedItem: AppTab = .dashboard
 
     /// Currently selected project path for cross-tab context.
     public var selectedProjectPath: String? = nil {

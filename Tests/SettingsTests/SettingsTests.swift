@@ -114,7 +114,7 @@ final class SettingsTests: XCTestCase {
         )
 
         let appState = AppState(preferences: store, migrator: migrator)
-        XCTAssertEqual(appState.selectedItem, .projects)
+        XCTAssertEqual(appState.selectedItem, .dashboard)
     }
     // MARK: - Connection test (F9)
 

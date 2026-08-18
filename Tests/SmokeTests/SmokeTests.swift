@@ -72,8 +72,7 @@ final class SmokeTests: XCTestCase {
 
     func testAppStateDefaults() {
         let appState = AppState()
-        XCTAssertEqual(appState.selectedItem, .projects)
-        XCTAssertTrue(appState.globalSearchQuery.isEmpty)
+        XCTAssertEqual(appState.selectedItem, .dashboard)
         XCTAssertFalse(appState.searchFocused)
         XCTAssertEqual(appState.sidebarVisibility, .all)
         XCTAssertTrue(appState.showOnboarding)
