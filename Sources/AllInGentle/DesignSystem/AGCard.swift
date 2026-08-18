@@ -9,14 +9,16 @@ public struct AGCard<Content: View>: View {
     @State private var isHovered = false
 
     public let content: Content
+    public let padding: CGFloat
 
-    public init(@ViewBuilder content: () -> Content) {
+    public init(padding: CGFloat = AGSpacing.cardPadding, @ViewBuilder content: () -> Content) {
+        self.padding = padding
         self.content = content()
     }
 
     public var body: some View {
         content
-            .padding(AGSpacing.cardPadding)
+            .padding(padding)
             .background(AGColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: AGSpacing.cornerRadiusLarge, style: .continuous))
             .overlay(

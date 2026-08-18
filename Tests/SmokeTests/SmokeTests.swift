@@ -8,7 +8,7 @@ import AllInGentleTestSupport
 final class SmokeTests: XCTestCase {
     // MARK: - Sidebar destinations
 
-    func testAllSixSidebarItemsAreDefined() {
+    func testAllSevenSidebarItemsAreDefined() {
         let items = AppState.AppTab.allCases
         XCTAssertEqual(
             items.map(\.rawValue),
@@ -19,6 +19,7 @@ final class SmokeTests: XCTestCase {
                 "tokens",
                 "chat",
                 "sessionCleaner",
+                "dashboard",
             ])
     }
 
@@ -71,8 +72,7 @@ final class SmokeTests: XCTestCase {
 
     func testAppStateDefaults() {
         let appState = AppState()
-        XCTAssertEqual(appState.selectedItem, .projects)
-        XCTAssertTrue(appState.globalSearchQuery.isEmpty)
+        XCTAssertEqual(appState.selectedItem, .dashboard)
         XCTAssertFalse(appState.searchFocused)
         XCTAssertEqual(appState.sidebarVisibility, .all)
         XCTAssertTrue(appState.showOnboarding)

@@ -18,14 +18,15 @@ struct ProjectsView: View {
             viewModel.onSelectionChange = { appState.selectedProjectPath = $0 }
             await viewModel.load(initialSelectedPath: appState.selectedProjectPath)
         }
-        .onChange(of: appState.globalSearchQuery) { _, new in
-            viewModel.searchQuery = new
-        }
     }
 
     private var searchField: some View {
-        AGSearchField(text: $viewModel.searchQuery, placeholderKey: "projects.search")
-            .padding(AGSpacing.medium)
+        AGSearchField(
+            text: $viewModel.searchQuery,
+            isFocused: Bindable(appState).searchFocused,
+            placeholderKey: "projects.search"
+        )
+        .padding(AGSpacing.medium)
     }
 
     @ViewBuilder

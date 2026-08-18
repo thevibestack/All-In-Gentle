@@ -148,6 +148,22 @@ final class ModelsTests: XCTestCase {
         XCTAssertNotEqual(AllInGentleError.readOnlyViolation, .sourceUnavailable("a"))
     }
 
+    // MARK: - MetricSample Equatable (enables .animation(value:) on chart tails)
+
+    func testMetricSampleEquatableComparesAllStoredProperties() {
+        let id = UUID()
+        let timestamp = Date(timeIntervalSince1970: 1_700_000_000)
+        let sample = MetricSample(id: id, timestamp: timestamp, value: 42.5)
+        XCTAssertEqual(sample, MetricSample(id: id, timestamp: timestamp, value: 42.5))
+        XCTAssertNotEqual(
+            sample, MetricSample(id: id, timestamp: timestamp, value: 42.6), "value difference must break equality")
+        XCTAssertNotEqual(
+            sample, MetricSample(id: UUID(), timestamp: timestamp, value: 42.5), "id difference must break equality")
+        XCTAssertNotEqual(
+            sample, MetricSample(id: id, timestamp: timestamp.addingTimeInterval(1), value: 42.5),
+            "timestamp difference must break equality")
+    }
+
     // MARK: - Sendable compile-time gate
 
     func testAllModelsConformToSendable() {
@@ -229,8 +245,8 @@ final class ModelsTests: XCTestCase {
         let es = try XCTUnwrap(catalog(for: "es", in: bundle), "es.lproj catalog not found")
 
         XCTAssertEqual(Set(en.keys), Set(es.keys))
-        XCTAssertEqual(en.count, 148)
-        XCTAssertEqual(es.count, 148)
+        XCTAssertEqual(en.count, 166)
+        XCTAssertEqual(es.count, 166)
     }
 
     // MARK: - Helpers (F3)

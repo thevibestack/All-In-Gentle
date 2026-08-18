@@ -60,6 +60,58 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertLessThan(brightness, 0.3, "Dark accentText must be dark, got brightness \(brightness)")
     }
 
+    // MARK: - MetricColor semantic tokens (D1)
+
+    /// Metric → AGColors token map under test (spec D1): CPU keeps the single
+    /// accent; the other metrics reuse the four status hues, no new colors.
+    private static let metricTokenPairs: [(metric: MetricColor, token: Color)] = [
+        (.cpu, AGColors.accent),
+        (.gpu, AGColors.statusLive),
+        (.ram, AGColors.statusPlaceholder),
+        (.networkDown, AGColors.statusLive),
+        (.networkUp, AGColors.statusPlaceholder),
+        (.battery, AGColors.statusDisabled),
+    ]
+
+    func testMetricColorMapsEachMetricToItsAGToken() {
+        for (metric, token) in Self.metricTokenPairs {
+            assertColor(metric.token, equalsToken: token, under: NSAppearance(named: .aqua)!)
+        }
+    }
+
+    func testMetricColorTokensResolveToMappedTokenInBothAppearances() {
+        for appearance in [NSAppearance(named: .aqua)!, NSAppearance(named: .darkAqua)!] {
+            for (metric, token) in Self.metricTokenPairs {
+                // A hardcoded literal or a broken dynamic provider would fail
+                // the component comparison in at least one appearance.
+                assertColor(metric.token, equalsToken: token, under: appearance)
+            }
+        }
+    }
+
+    // MARK: - SF Mono metric typography (D2)
+
+    func testMetricTypographySizesAreInSpecRange() {
+        // Spec D2: headline numeral 28–34pt, metric caption 11–12pt on SF Mono.
+        XCTAssertTrue(
+            (28...34).contains(AGTypography.metricSize),
+            "metricSize \(AGTypography.metricSize) must be in 28...34"
+        )
+        XCTAssertTrue(
+            (11...12).contains(AGTypography.metricCaptionSize),
+            "metricCaptionSize \(AGTypography.metricCaptionSize) must be in 11...12"
+        )
+    }
+
+    // MARK: - Dense spacing tokens (density)
+
+    func testDenseSpacingTokensMatchSpecValues() {
+        // Spec: card padding 12–14, grid gap == 12, sidebar row padding 4–6.
+        XCTAssertEqual(AGSpacing.cardPaddingDense, 12)
+        XCTAssertEqual(AGSpacing.gridGapDense, 12)
+        XCTAssertEqual(AGSpacing.sidebarRowPaddingDense, 4)
+    }
+
     // MARK: - Helpers
 
     /// Resolves a SwiftUI `Color` token as sRGB under a specific appearance by
@@ -69,6 +121,20 @@ final class DesignSystemTests: XCTestCase {
         NSAppearance.current = appearance
         defer { NSAppearance.current = previous }
         return NSColor(color).usingColorSpace(.sRGB) ?? NSColor.white
+    }
+
+    /// Asserts a color is exactly an AGColors token under a fixed appearance:
+    /// any hardcoded color literal would fail the sRGB comparison.
+    private func assertColor(
+        _ color: Color, equalsToken token: Color, under appearance: NSAppearance,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let subject = resolve(color, under: appearance)
+        let expected = resolve(token, under: appearance)
+        XCTAssertEqual(subject.redComponent, expected.redComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(subject.greenComponent, expected.greenComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(subject.blueComponent, expected.blueComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(subject.alphaComponent, expected.alphaComponent, accuracy: 0.01, file: file, line: line)
     }
 
     /// WCAG 2.x relative luminance of an sRGB color (0...1).
