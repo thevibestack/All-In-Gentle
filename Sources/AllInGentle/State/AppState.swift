@@ -80,6 +80,7 @@ public final class AppState {
         case tokens
         case chat
         case sessionCleaner
+        case dashboard
 
         public var id: String { rawValue }
 
@@ -109,6 +110,8 @@ public final class AppState {
                 return "bubble.left.and.bubble.right"
             case .sessionCleaner:
                 return "trash"
+            case .dashboard:
+                return "gauge"
             }
         }
     }

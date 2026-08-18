@@ -142,6 +142,19 @@
 "projectDetail.documents.title" = "Documents";
 "projectDetail.documents.empty" = "No OpenSpec documents found for this project.";
 
+"tab.dashboard" = "Dashboard";
+"dashboard.title" = "Dashboard";
+"dashboard.widgets.empty.title" = "No data yet";
+"dashboard.widgets.empty.message" = "Waiting for the first sample to arrive.";
+"dashboard.card.cpu.title" = "CPU";
+"dashboard.card.ram.title" = "Memory";
+"dashboard.card.gpu.title" = "GPU";
+"dashboard.card.network.title" = "Network";
+"dashboard.card.battery.title" = "Battery";
+"dashboard.card.services.title" = "Services";
+"dashboard.services.running" = "%d/%d running";
+"dashboard.card.empty" = "No data";
+
 "errors.readOnlyViolation" = "This action is read-only and cannot be performed.";
 "errors.sourceUnavailable" = "A data source is unavailable: %@";
 "errors.invalidConfiguration" = "Invalid configuration: %@";

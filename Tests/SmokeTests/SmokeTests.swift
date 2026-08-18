@@ -8,7 +8,7 @@ import AllInGentleTestSupport
 final class SmokeTests: XCTestCase {
     // MARK: - Sidebar destinations
 
-    func testAllSixSidebarItemsAreDefined() {
+    func testAllSevenSidebarItemsAreDefined() {
         let items = AppState.AppTab.allCases
         XCTAssertEqual(
             items.map(\.rawValue),
@@ -19,6 +19,7 @@ final class SmokeTests: XCTestCase {
                 "tokens",
                 "chat",
                 "sessionCleaner",
+                "dashboard",
             ])
     }
 
