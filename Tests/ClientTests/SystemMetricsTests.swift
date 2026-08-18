@@ -23,16 +23,142 @@ final class SystemMetricsTests: XCTestCase {
         XCTAssertNil(battery)
     }
 
-    func testActorReportsUnavailableMetricsAsNil() async {
-        // GPU/network/battery readers land in the next batch; until then the
-        // actor reports `nil` = unavailable (ST-4/5/6). Hermetic: no syscall.
-        let metrics = SystemMetrics()
-        let gpu = await metrics.gpu()
-        let network = await metrics.network()
-        let battery = await metrics.battery()
-        XCTAssertNil(gpu)
-        XCTAssertNil(network)
-        XCTAssertNil(battery)
+    // MARK: - GPU (ST-4: PerformanceStatistics, unavailable -> nil)
+
+    func testGpuReturnsNilWhenNoAcceleratorReportsUtilization() {
+        // No IOAccelerator reported a value (Intel/VM path): unavailable (ST-4).
+        let snapshot = gpuSnapshot(deviceUtilizations: [], rendererUtilizations: [])
+        XCTAssertNil(snapshot)
+    }
+
+    func testGpuPicksMaximumUtilizationAcrossAccelerators() {
+        // Integrated + discrete accelerators both report; the busiest one wins.
+        let snapshot = gpuSnapshot(
+            deviceUtilizations: [10.0, 85.0, 60.0],
+            rendererUtilizations: [30.0, 40.0]
+        )
+        XCTAssertEqual(snapshot?.utilization ?? -1, 85.0, accuracy: 0.0001)
+        XCTAssertEqual(snapshot?.rendererUtilization ?? -1, 40.0, accuracy: 0.0001)
+    }
+
+    func testGpuClampsUtilizationIntoZeroToHundredRange() {
+        // A brief over-100% or negative reading must never surface.
+        let over = gpuSnapshot(deviceUtilizations: [150.0], rendererUtilizations: [200.0])
+        XCTAssertEqual(over?.utilization ?? -1, 100.0, accuracy: 0.0001)
+        XCTAssertEqual(over?.rendererUtilization ?? -1, 100.0, accuracy: 0.0001)
+        let under = gpuSnapshot(deviceUtilizations: [-5.0], rendererUtilizations: [-1.0])
+        XCTAssertEqual(under?.utilization ?? -1, 0.0, accuracy: 0.0001)
+        XCTAssertEqual(under?.rendererUtilization ?? -1, 0.0, accuracy: 0.0001)
+    }
+
+    func testGpuRendererUtilizationIsNilWhenAbsent() {
+        let snapshot = gpuSnapshot(deviceUtilizations: [80.0], rendererUtilizations: [])
+        XCTAssertEqual(snapshot?.utilization ?? -1, 80.0, accuracy: 0.0001)
+        XCTAssertNil(snapshot?.rendererUtilization)
+    }
+
+    // MARK: - Network (ST-5: cumulative delta, clamp negative -> 0)
+
+    func testNetworkReturnsNilWhenNoActiveInterface() {
+        // No eligible (up, non-loopback) interface exists: no-data path (ST-5).
+        XCTAssertNil(primaryInterface(from: []))
+    }
+
+    func testNetworkSelectsBusiestInterface() {
+        let samples: [(name: String, rx: UInt64, tx: UInt64)] = [
+            ("en0", 1_000, 500),
+            ("en1", 8_000_000, 2_000_000),
+            ("utun4", 10, 10),
+        ]
+        let primary = primaryInterface(from: samples)
+        XCTAssertEqual(primary?.name, "en1")
+        XCTAssertEqual(primary?.rx, 8_000_000)
+        XCTAssertEqual(primary?.tx, 2_000_000)
+    }
+
+    func testNetworkCounterResetClampsDeltaToZero() {
+        // A counter going backwards (restart/wrap) clamps to zero (ST-5).
+        XCTAssertEqual(clampedDelta(100, 50), 0)
+        let snapshot = networkSnapshot(
+            interfaceName: "en0", receivedDelta: 0, sentDelta: 0, elapsedSeconds: 2
+        )
+        XCTAssertEqual(snapshot.receivedBytesPerSec, 0.0, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.sentBytesPerSec, 0.0, accuracy: 0.0001)
+    }
+
+    func testNetworkComputesRatesFromDeltaAndElapsed() {
+        let snapshot = networkSnapshot(
+            interfaceName: "en0", receivedDelta: 2_000_000, sentDelta: 1_000_000,
+            elapsedSeconds: 2
+        )
+        XCTAssertEqual(snapshot.interfaceName, "en0")
+        XCTAssertEqual(snapshot.receivedBytesPerSec, 1_000_000.0, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.sentBytesPerSec, 500_000.0, accuracy: 0.0001)
+    }
+
+    func testNetworkZeroElapsedYieldsZeroRatesWithoutDividingByZero() {
+        let snapshot = networkSnapshot(
+            interfaceName: "en0", receivedDelta: 1_000, sentDelta: 2_000, elapsedSeconds: 0
+        )
+        XCTAssertEqual(snapshot.receivedBytesPerSec, 0.0, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.sentBytesPerSec, 0.0, accuracy: 0.0001)
+    }
+
+    // MARK: - Battery (ST-6: level/charging/cycles, time-to-empty -1 -> nil)
+
+    func testBatteryReturnsNilWhenCapacityIsMissing() {
+        let noCurrent = batterySnapshot(
+            currentCapacity: nil, maxCapacity: 100, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: -1
+        )
+        let noMax = batterySnapshot(
+            currentCapacity: 50, maxCapacity: nil, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: -1
+        )
+        XCTAssertNil(noCurrent)
+        XCTAssertNil(noMax)
+    }
+
+    func testBatteryComputesLevelChargingAndCycleCount() {
+        let snapshot = batterySnapshot(
+            currentCapacity: 80, maxCapacity: 100, isCharging: true, cycleCount: 79,
+            timeToEmptyMinutes: -1
+        )
+        XCTAssertEqual(snapshot?.level ?? -1, 80.0, accuracy: 0.0001)
+        XCTAssertEqual(snapshot?.isCharging, true)
+        XCTAssertEqual(snapshot?.cycleCount, 79)
+        XCTAssertNil(snapshot?.timeToEmpty)
+    }
+
+    func testBatteryClampsLevelIntoZeroToHundredRange() {
+        // Over-100% (brief overcharge) and negative capacities must clamp.
+        let over = batterySnapshot(
+            currentCapacity: 120, maxCapacity: 100, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: -1
+        )
+        XCTAssertEqual(over?.level ?? -1, 100.0, accuracy: 0.0001)
+        let under = batterySnapshot(
+            currentCapacity: -5, maxCapacity: 100, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: -1
+        )
+        XCTAssertEqual(under?.level ?? -1, 0.0, accuracy: 0.0001)
+    }
+
+    func testBatteryConvertsTimeToEmptyMinutesToSeconds() {
+        let snapshot = batterySnapshot(
+            currentCapacity: 50, maxCapacity: 100, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: 90
+        )
+        XCTAssertEqual(snapshot?.timeToEmpty ?? -1, 5_400.0, accuracy: 0.0001)
+    }
+
+    func testBatteryReturnsNilWhenMaxCapacityIsZero() {
+        // A zero divisor must never produce a level (no divide-by-zero).
+        let snapshot = batterySnapshot(
+            currentCapacity: 10, maxCapacity: 0, isCharging: false, cycleCount: 0,
+            timeToEmptyMinutes: -1
+        )
+        XCTAssertNil(snapshot)
     }
 
     // MARK: - CPU delta (ST-3: first = baseline nil, then delta %)

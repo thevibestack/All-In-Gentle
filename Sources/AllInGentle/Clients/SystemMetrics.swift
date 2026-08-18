@@ -1,10 +1,12 @@
 import Darwin
 import Foundation
+import IOKit
+import IOKit.ps
 
-// Portions of this file's RAM/CPU readers are ported from exelban/stats
-// (https://github.com/exelban/stats), Copyright (c) 2019 exelban, MIT — see
-// LICENSE. The delta/baseline math is factored into pure functions and every
-// Mach call is confined to this actor (spec G-3).
+// Portions of this file's RAM/CPU/GPU/network/battery readers are ported from
+// exelban/stats (https://github.com/exelban/stats), Copyright (c) 2019 exelban,
+// MIT — see LICENSE. The delta/baseline math is factored into pure functions
+// and every Mach/IOKit/sysctl call is confined to this actor (spec G-3).
 
 // MARK: - Reader seam
 
@@ -32,6 +34,9 @@ public protocol SystemMetricsProviding: Sendable {
 public actor SystemMetrics: SystemMetricsProviding {
     private var prevCPUTicks: processor_info_array_t?
     private var prevCPUTickCount: Int = 0
+    private var prevNetBytes: (rx: UInt64, tx: UInt64)?
+    private var prevNetName: String?
+    private var prevNetSampleAt: Date?
 
     public init() {}
 
@@ -107,14 +112,84 @@ public actor SystemMetrics: SystemMetricsProviding {
         )
     }
 
-    // MARK: Skeleton (readers land in the next telemetry batch)
+    // MARK: GPU (spec ST-4)
 
-    // Full readers land next batch; `nil` = unavailable, the degradation path.
-    public func gpu() async -> GPUSnapshot? { nil }
-    public func network() async -> NetworkSnapshot? { nil }
-    public func battery() async -> BatterySnapshot? { nil }
+    /// Reads `PerformanceStatistics` from every `IOAccelerator` service; the
+    /// busiest device wins, `nil` when none reported a value (ST-4, G-3).
+    public func gpu() async -> GPUSnapshot? {
+        guard let matching = IOServiceMatching("IOAccelerator") else { return nil }
+        var iterator: io_iterator_t = 0
+        // IOServiceGetMatchingServices consumes the matching dictionary.
+        guard
+            IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator)
+                == KERN_SUCCESS
+        else { return nil }
+        defer { IOObjectRelease(iterator) }
 
-    // MARK: Mach/sysctl helpers (actor-confined, G-3)
+        var deviceValues: [Double] = []
+        var rendererValues: [Double] = []
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            let current = service
+            defer { IOObjectRelease(current) }
+            let stats = performanceStatistics(service: current)
+            if let device = stats["Device Utilization %"] { deviceValues.append(device) }
+            if let renderer = stats["Renderer Utilization %"] { rendererValues.append(renderer) }
+            service = IOIteratorNext(iterator)
+        }
+        return gpuSnapshot(deviceUtilizations: deviceValues, rendererUtilizations: rendererValues)
+    }
+
+    // MARK: Network (spec ST-5)
+
+    /// Deltas `NET_RT_IFLIST2` 64-bit counters; baseline nil, clamp negative (ST-5).
+    public func network() async -> NetworkSnapshot? {
+        let samples = interfaceSamples()
+        guard let primary = primaryInterface(from: samples) else { return nil }
+
+        let now = Date()
+        let previous = prevNetBytes
+        let previousName = prevNetName
+        let previousTime = prevNetSampleAt
+        prevNetName = primary.name
+        prevNetBytes = (rx: primary.rx, tx: primary.tx)
+        prevNetSampleAt = now
+
+        guard previousName == primary.name, let previous else { return nil }
+        let elapsed = now.timeIntervalSince(previousTime ?? now)
+        return networkSnapshot(
+            interfaceName: primary.name,
+            receivedDelta: clampedDelta(previous.rx, primary.rx),
+            sentDelta: clampedDelta(previous.tx, primary.tx),
+            elapsedSeconds: elapsed
+        )
+    }
+
+    // MARK: Battery (spec ST-6)
+
+    /// Reads the internal-battery power source (level/charging/time-to-empty)
+    /// plus `AppleSmartBattery` cycle count; `nil` on desktops (ST-6).
+    public func battery() async -> BatterySnapshot? {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue() else { return nil }
+        guard let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() else { return nil }
+        for source in list as [CFTypeRef] {
+            guard
+                let description = IOPSGetPowerSourceDescription(info, source)?
+                    .takeUnretainedValue() as? [String: Any]
+            else { continue }
+            guard description[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
+            return batterySnapshot(
+                currentCapacity: description[kIOPSCurrentCapacityKey] as? Int,
+                maxCapacity: description[kIOPSMaxCapacityKey] as? Int,
+                isCharging: description[kIOPSIsChargingKey] as? Bool ?? false,
+                cycleCount: batteryCycleCount(),
+                timeToEmptyMinutes: description[kIOPSTimeToEmptyKey] as? Int ?? -1
+            )
+        }
+        return nil
+    }
+
+    // MARK: Mach/IOKit/sysctl helpers (actor-confined, G-3)
 
     /// Copies per-core tick counters from a `PROCESSOR_CPU_LOAD_INFO` buffer
     /// into Swift memory (`CPU_STATE_MAX` values per core).
@@ -148,6 +223,98 @@ public actor SystemMetrics: SystemMetricsProviding {
             return (0, 0)
         }
         return (usage.xsu_used, usage.xsu_total)
+    }
+
+    /// Copies one accelerator's nested `PerformanceStatistics` to `Double`s.
+    private func performanceStatistics(service: io_registry_entry_t) -> [String: Double] {
+        var properties: Unmanaged<CFMutableDictionary>?
+        let result = IORegistryEntryCreateCFProperties(
+            service, &properties, kCFAllocatorDefault, 0
+        )
+        guard result == KERN_SUCCESS,
+            let dict = properties?.takeRetainedValue() as? [String: Any],
+            let statistics = dict["PerformanceStatistics"] as? [String: Any]
+        else { return [:] }
+        return statistics.compactMapValues { value in
+            let cfValue = value as CFTypeRef
+            guard CFGetTypeID(cfValue) == CFNumberGetTypeID() else { return nil }
+            let number = cfValue as! CFNumber
+            var converted = 0.0
+            guard CFNumberGetValue(number, .doubleType, &converted) else { return nil }
+            return converted
+        }
+    }
+
+    /// Enumerates up, non-loopback interfaces with 64-bit counters via
+    /// `NET_RT_IFLIST2`; names come from `getifaddrs` (32-bit `if_data`).
+    private func interfaceSamples() -> [(name: String, rx: UInt64, tx: UInt64)] {
+        let names = interfaceNamesByIndex()
+        var mib: [Int32] = [CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, 0]
+        var length: Int = 0
+        guard sysctl(&mib, UInt32(mib.count), nil, &length, nil, 0) == 0, length > 0 else {
+            return []
+        }
+        let buffer = UnsafeMutableRawPointer.allocate(
+            byteCount: length, alignment: MemoryLayout<if_msghdr2>.alignment
+        )
+        defer { buffer.deallocate() }
+        guard sysctl(&mib, UInt32(mib.count), buffer, &length, nil, 0) == 0 else { return [] }
+
+        var samples: [(name: String, rx: UInt64, tx: UInt64)] = []
+        var offset = 0
+        while offset + MemoryLayout<if_msghdr2>.size <= length {
+            let message = buffer.advanced(by: offset).assumingMemoryBound(to: if_msghdr2.self)
+            let messageLength = Int(message.pointee.ifm_msglen)
+            guard messageLength > 0, offset + messageLength <= length else { break }
+            if message.pointee.ifm_type == UInt8(RTM_IFINFO2),
+                message.pointee.ifm_flags & IFF_UP != 0,
+                message.pointee.ifm_flags & IFF_LOOPBACK == 0,
+                let name = names[UInt32(message.pointee.ifm_index)]
+            {
+                samples.append(
+                    (
+                        name: name,
+                        rx: message.pointee.ifm_data.ifi_ibytes,
+                        tx: message.pointee.ifm_data.ifi_obytes
+                    ))
+            }
+            offset += messageLength
+        }
+        return samples
+    }
+
+    /// Maps interface indices to names from `getifaddrs` (AF_LINK entries).
+    private func interfaceNamesByIndex() -> [UInt32: String] {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0, let first = head else { return [:] }
+        defer { freeifaddrs(first) }
+        var names: [UInt32: String] = [:]
+        var next: UnsafeMutablePointer<ifaddrs>? = first
+        while let current = next {
+            defer { next = current.pointee.ifa_next }
+            guard current.pointee.ifa_addr?.pointee.sa_family == sa_family_t(AF_LINK) else {
+                continue
+            }
+            let index = if_nametoindex(current.pointee.ifa_name)
+            guard index != 0 else { continue }
+            names[index] = String(cString: current.pointee.ifa_name)
+        }
+        return names
+    }
+
+    /// Reads `CycleCount` from `AppleSmartBattery`; `0` when absent.
+    private func batteryCycleCount() -> Int {
+        guard let matching = IOServiceMatching("AppleSmartBattery") else { return 0 }
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, matching)
+        guard service != 0 else { return 0 }
+        defer { IOObjectRelease(service) }
+        var properties: Unmanaged<CFMutableDictionary>?
+        guard
+            IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0)
+                == KERN_SUCCESS,
+            let dict = properties?.takeRetainedValue() as? [String: Any]
+        else { return 0 }
+        return dict["CycleCount"] as? Int ?? 0
     }
 }
 
@@ -229,4 +396,71 @@ func ramSnapshot(
 /// Returns `lhs - rhs` clamped at zero instead of trapping on underflow.
 private func saturatingSubtract(_ lhs: UInt64, _ rhs: UInt64) -> UInt64 {
     lhs >= rhs ? lhs - rhs : 0
+}
+
+/// Computes the GPU snapshot from per-accelerator `PerformanceStatistics`
+/// percentages (spec ST-4). Picks the busiest accelerator, clamps to 0...100,
+/// and returns `nil` when no accelerator reported a value (unavailable).
+func gpuSnapshot(deviceUtilizations: [Double], rendererUtilizations: [Double]) -> GPUSnapshot? {
+    guard let device = deviceUtilizations.max() else { return nil }
+    let utilization = min(max(device, 0), 100)
+    guard let renderer = rendererUtilizations.max() else {
+        return GPUSnapshot(utilization: utilization, rendererUtilization: nil)
+    }
+    return GPUSnapshot(
+        utilization: utilization, rendererUtilization: min(max(renderer, 0), 100)
+    )
+}
+
+/// Picks the primary interface sample — the busiest by cumulative bytes — or
+/// `nil` when no eligible interface exists (spec ST-5 no-data path).
+func primaryInterface(from samples: [(name: String, rx: UInt64, tx: UInt64)])
+    -> (name: String, rx: UInt64, tx: UInt64)?
+{
+    samples.max { $0.rx + $0.tx < $1.rx + $1.tx }
+}
+
+/// Computes throughput rates from a cumulative-byte delta and the elapsed
+/// interval (spec ST-5). Negative deltas clamp to `0` upstream via
+/// `clampedDelta`; a non-positive interval yields zero rates, never a NaN.
+func networkSnapshot(
+    interfaceName: String,
+    receivedDelta: UInt64,
+    sentDelta: UInt64,
+    elapsedSeconds: TimeInterval
+) -> NetworkSnapshot {
+    guard elapsedSeconds > 0 else {
+        return NetworkSnapshot(
+            interfaceName: interfaceName, receivedBytesPerSec: 0, sentBytesPerSec: 0
+        )
+    }
+    return NetworkSnapshot(
+        interfaceName: interfaceName,
+        receivedBytesPerSec: Double(receivedDelta) / elapsedSeconds,
+        sentBytesPerSec: Double(sentDelta) / elapsedSeconds
+    )
+}
+
+/// Computes the battery snapshot from raw power-source values (spec ST-6).
+/// Missing or zero max capacity → `nil` (no usable level); a `-1`
+/// time-to-empty (plugged) becomes `nil`; level clamps to 0...100.
+func batterySnapshot(
+    currentCapacity: Int?,
+    maxCapacity: Int?,
+    isCharging: Bool,
+    cycleCount: Int,
+    timeToEmptyMinutes: Int
+) -> BatterySnapshot? {
+    guard let current = currentCapacity, let maximum = maxCapacity, maximum > 0 else { return nil }
+    let level = min(max(Double(current) / Double(maximum) * 100, 0), 100)
+    let timeToEmpty =
+        timeToEmptyMinutes == -1
+        ? nil
+        : TimeInterval(max(0, timeToEmptyMinutes) * 60)
+    return BatterySnapshot(
+        level: level,
+        isCharging: isCharging,
+        cycleCount: cycleCount,
+        timeToEmpty: timeToEmpty
+    )
 }
