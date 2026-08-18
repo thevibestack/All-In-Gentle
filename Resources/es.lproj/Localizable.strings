@@ -142,6 +142,25 @@
 "projectDetail.documents.title" = "Documentos";
 "projectDetail.documents.empty" = "No se encontraron documentos OpenSpec para este proyecto.";
 
+"tab.dashboard" = "Panel";
+"dashboard.title" = "Panel";
+"dashboard.widgets.empty.title" = "Sin datos todavía";
+"dashboard.widgets.empty.message" = "Esperando la primera muestra.";
+"dashboard.card.cpu.title" = "CPU";
+"dashboard.card.ram.title" = "Memoria";
+"dashboard.card.gpu.title" = "GPU";
+"dashboard.card.network.title" = "Red";
+"dashboard.card.battery.title" = "Batería";
+"dashboard.card.services.title" = "Servicios";
+"dashboard.services.running" = "%d/%d en ejecución";
+"dashboard.card.ram.swap" = "Intercambio: %@ / %@";
+"dashboard.card.gpu.unavailable.title" = "GPU no disponible";
+"dashboard.card.gpu.unavailable.message" = "Este Mac no expone estadísticas de uso de GPU.";
+"dashboard.card.network.interface" = "Interfaz: %@";
+"dashboard.card.network.rates" = "↓ %@  ↑ %@";
+"dashboard.card.battery.cycles" = "Ciclos: %d";
+"dashboard.card.battery.charging" = "Cargando";
+
 "errors.readOnlyViolation" = "Esta acción es de solo lectura y no se puede realizar.";
 "errors.sourceUnavailable" = "Una fuente de datos no está disponible: %@";
 "errors.invalidConfiguration" = "Configuración inválida: %@";

@@ -39,6 +39,7 @@ public struct AllInGentleApp: App {
                 sectionShortcutButton(item: .tokens, number: 4)
                 sectionShortcutButton(item: .chat, number: 5)
                 sectionShortcutButton(item: .sessionCleaner, number: 6)
+                sectionShortcutButton(item: .dashboard, number: 7)
             }
 
             CommandGroup(replacing: .help) {
@@ -135,6 +136,8 @@ struct RootView: View {
             ChatView()
         case .sessionCleaner:
             SessionCleanerView()
+        case .dashboard:
+            DashboardView()
         }
     }
 
