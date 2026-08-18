@@ -17,10 +17,13 @@ public enum DashboardCardPhase: Equatable, Sendable {
 public final class DashboardViewModel {
     /// Maximum history length per chart series (spec ST-7: bounded 60–120).
     public static let historyCapacity = 120
-    /// Fast-metric cadence: CPU/RAM/GPU/network (~2s, ST-7).
-    public static let fastInterval: Duration = .seconds(2)
+    /// Fast-metric cadence: CPU/RAM/GPU/network (~1s, spec D4).
+    public static let fastInterval: Duration = .seconds(1)
     /// Slow-metric cadence: battery + services (~5s, ST-7).
     public static let slowInterval: Duration = .seconds(5)
+    /// Number of newest samples each chart renders (spec D4: window 60–90,
+    /// trimmed at model level, no pre-aggregation).
+    public static let displayWindow = 60
     /// The three Gentle services surfaced by the services card (DC-6).
     public static let defaultServices: [ServiceDescriptor] = [
         ServiceDescriptor(id: "engram", name: "Engram", processName: "engram", port: 7437),
@@ -31,6 +34,7 @@ public final class DashboardViewModel {
     public private(set) var cpu: CPUSnapshot?
     public private(set) var cpuHistory: [MetricSample] = []
     public private(set) var ram: RAMSnapshot?
+    public private(set) var ramHistory: [MetricSample] = []
     public private(set) var gpu: GPUSnapshot?
     public private(set) var gpuHistory: [MetricSample] = []
     public private(set) var network: NetworkSnapshot?
@@ -83,7 +87,12 @@ public final class DashboardViewModel {
             self.cpu = cpu
             cpuHistory = Self.appending(MetricSample(value: cpu.total), to: cpuHistory)
         }
-        if let ram = await metrics.ram() { self.ram = ram }
+        if let ram = await metrics.ram() {
+            self.ram = ram
+            if let usedPercent = Self.ramUsedPercent(ram) {
+                ramHistory = Self.appending(MetricSample(value: usedPercent), to: ramHistory)
+            }
+        }
         if let gpu = await metrics.gpu() {
             self.gpu = gpu
             gpuHistory = Self.appending(MetricSample(value: gpu.utilization), to: gpuHistory)
@@ -124,6 +133,19 @@ public final class DashboardViewModel {
             updated.removeFirst(updated.count - capacity)
         }
         return updated
+    }
+
+    /// The series a chart should render: only the newest `displayWindow`
+    /// samples (spec D4). Pure trim — no pre-aggregation, no padding.
+    public func displayedSeries(_ history: [MetricSample]) -> [MetricSample] {
+        Array(history.suffix(Self.displayWindow))
+    }
+
+    /// RAM used percentage for the sparkline history (spec D4). `nil` when the
+    /// total is unknown so a zero-size snapshot never yields a divide-by-zero.
+    public static func ramUsedPercent(_ ram: RAMSnapshot) -> Double? {
+        guard ram.totalBytes > 0 else { return nil }
+        return Double(ram.usedBytes) / Double(ram.totalBytes) * 100
     }
 
     private func runFastLoop() async {
