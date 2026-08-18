@@ -37,13 +37,39 @@ func serviceBadgeStatus(_ status: ServiceStatus) -> AGStatus {
     return status.lastError == nil ? .disabled : .error
 }
 
+// MARK: - 3.3 Delta helpers (D3)
+
+/// The change between the two newest samples: `last − secondLast`. `nil` when
+/// fewer than two samples exist (spec D3 card delta caption).
+func latestDelta(_ history: [MetricSample]) -> Double? {
+    guard history.count >= 2,
+        let last = history.last?.value,
+        let previous = history.dropLast().last?.value
+    else { return nil }
+    return last - previous
+}
+
+/// Signed percentage delta caption, e.g. "+3.2%"; `nil` when no delta exists.
+func deltaCaption(_ delta: Double?) -> String? {
+    guard let delta else { return nil }
+    let sign = delta >= 0 ? "+" : ""
+    return String(format: "%@%.1f%%", sign, delta)
+}
+
+/// Signed transfer-rate delta caption, e.g. "+1.5 MB/s"; `nil` when no delta.
+func rateDeltaCaption(_ delta: Double?) -> String? {
+    guard let delta else { return nil }
+    let sign = delta >= 0 ? "+" : "-"
+    return sign + formatRate(abs(delta))
+}
+
 // MARK: - Shared card chrome (AG tokens only, DW-6)
 
-/// Localized card title (G-1) shared by all six cards.
+/// Localized caption title (secondary) shared by all six cards (D3).
 private func cardTitle(_ titleKey: String) -> some View {
     Text(L(titleKey))
-        .font(AGTypography.headline)
-        .foregroundStyle(AGColors.textPrimary)
+        .font(AGTypography.metricCaption)
+        .foregroundStyle(AGColors.textSecondary)
 }
 
 /// Loading placeholder shown before the first batch completes.
@@ -64,7 +90,7 @@ private func cardEmpty(
 /// Secondary caption row (swap, cycles, interface, running/total).
 private func cardCaption(_ text: String) -> some View {
     Text(text)
-        .font(AGTypography.caption)
+        .font(AGTypography.metricCaption)
         .foregroundStyle(AGColors.textSecondary)
 }
 
@@ -75,9 +101,28 @@ private func cardMono(_ text: String) -> some View {
         .foregroundStyle(AGColors.textPrimary)
 }
 
+/// Large metric numeral — the visual anchor of a card (D2/D3), tinted with
+/// the metric's semantic color.
+private func cardNumeral(_ text: String, color: Color) -> some View {
+    Text(text)
+        .font(AGTypography.metric)
+        .foregroundStyle(color)
+}
+
+/// Delta caption beside the numeral; hidden until two samples exist (D3).
+@ViewBuilder
+private func cardDelta(_ text: String?) -> some View {
+    if let text {
+        Text(text)
+            .font(AGTypography.metricCaption)
+            .foregroundStyle(AGColors.textSecondary)
+    }
+}
+
 // MARK: - DC-1 CPU
 
-/// CPU card: gauge + line history + per-core bars (DC-1).
+/// CPU card: caption title + tinted numeral + sparkline + delta; per-core
+/// bars demoted to a slim footer (DC-1, D3).
 struct CPUCard: View {
     let phase: DashboardCardPhase
     let cpu: CPUSnapshot?
@@ -85,7 +130,7 @@ struct CPUCard: View {
 
     var body: some View {
         DashboardCard {
-            VStack(alignment: .leading, spacing: AGSpacing.small) {
+            VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
                 cardTitle("dashboard.card.cpu.title")
                 switch phase {
                 case .loading:
@@ -93,12 +138,12 @@ struct CPUCard: View {
                 case .empty:
                     cardEmpty("chart.xyaxis.line")
                 case .content:
-                    HStack(spacing: AGSpacing.medium) {
-                        AGGauge(value: cpu?.total)
-                        cardMono("\(Int((cpu?.total ?? 0).rounded()))%")
+                    HStack(alignment: .firstTextBaseline, spacing: AGSpacing.small) {
+                        cardNumeral("\(Int((cpu?.total ?? 0).rounded()))%", color: MetricColor.cpu.token)
+                        cardDelta(deltaCaption(latestDelta(history)))
                     }
-                    AGLineChart(samples: history)
-                    AGBarChart(perCoreValues: cpu?.perCore ?? [])
+                    AGMiniChart(samples: history, color: MetricColor.cpu.token)
+                    AGBarChart(perCoreValues: cpu?.perCore ?? [], color: MetricColor.cpu.token)
                 }
             }
         }
@@ -107,14 +152,16 @@ struct CPUCard: View {
 
 // MARK: - DC-2 RAM
 
-/// RAM card: memory bar, used/total, pressure badge, swap line (DC-2).
+/// RAM card: caption title + tinted used-% numeral + ramHistory sparkline +
+/// delta; memory bar + swap demoted to a slim footer (DC-2, D3).
 struct RAMCard: View {
     let phase: DashboardCardPhase
     let ram: RAMSnapshot?
+    let history: [MetricSample]
 
     var body: some View {
         DashboardCard {
-            VStack(alignment: .leading, spacing: AGSpacing.small) {
+            VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
                 cardTitle("dashboard.card.ram.title")
                 switch phase {
                 case .loading:
@@ -124,10 +171,14 @@ struct RAMCard: View {
                 case .content:
                     if let ram {
                         HStack(alignment: .firstTextBaseline, spacing: AGSpacing.small) {
-                            cardMono("\(formatBytes(ram.usedBytes)) / \(formatBytes(ram.totalBytes))")
+                            cardNumeral(
+                                "\(Int((history.last?.value ?? 0).rounded()))%",
+                                color: MetricColor.ram.token)
+                            cardDelta(deltaCaption(latestDelta(history)))
                             Spacer()
                             AGStatusBadge(status: memoryPressureStatus(ram.pressure))
                         }
+                        AGMiniChart(samples: history, color: MetricColor.ram.token)
                         AGMemoryBar(segments: ramSegments(from: ram))
                         cardCaption(
                             L(
@@ -143,7 +194,8 @@ struct RAMCard: View {
 
 // MARK: - DC-3 GPU
 
-/// GPU card: gauge + line on Apple Silicon; AGEmptyState "unavailable" otherwise (DC-3).
+/// GPU card: caption title + tinted numeral + sparkline + delta on Apple
+/// Silicon; AGEmptyState "unavailable" otherwise (DC-3, D3).
 struct GPUCard: View {
     let phase: DashboardCardPhase
     let gpu: GPUSnapshot?
@@ -151,7 +203,7 @@ struct GPUCard: View {
 
     var body: some View {
         DashboardCard {
-            VStack(alignment: .leading, spacing: AGSpacing.small) {
+            VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
                 cardTitle("dashboard.card.gpu.title")
                 switch phase {
                 case .loading:
@@ -163,11 +215,13 @@ struct GPUCard: View {
                         messageKey: "dashboard.card.gpu.unavailable.message"
                     )
                 case .content:
-                    HStack(spacing: AGSpacing.medium) {
-                        AGGauge(value: gpu?.utilization)
-                        cardMono("\(Int((gpu?.utilization ?? 0).rounded()))%")
+                    HStack(alignment: .firstTextBaseline, spacing: AGSpacing.small) {
+                        cardNumeral(
+                            "\(Int((gpu?.utilization ?? 0).rounded()))%",
+                            color: MetricColor.gpu.token)
+                        cardDelta(deltaCaption(latestDelta(history)))
                     }
-                    AGLineChart(samples: history)
+                    AGMiniChart(samples: history, color: MetricColor.gpu.token)
                 }
             }
         }
@@ -176,7 +230,8 @@ struct GPUCard: View {
 
 // MARK: - DC-4 Network
 
-/// Network card: dual-line chart, up/down rates, interface name (DC-4).
+/// Network card: caption title + tinted receive-rate numeral + dual-series
+/// sparkline + delta; interface and both rates as captions (DC-4, D3).
 struct NetworkCard: View {
     let phase: DashboardCardPhase
     let network: NetworkSnapshot?
@@ -185,7 +240,7 @@ struct NetworkCard: View {
 
     var body: some View {
         DashboardCard {
-            VStack(alignment: .leading, spacing: AGSpacing.small) {
+            VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
                 cardTitle("dashboard.card.network.title")
                 switch phase {
                 case .loading:
@@ -194,10 +249,20 @@ struct NetworkCard: View {
                     cardEmpty("arrow.up.arrow.down")
                 case .content:
                     if let network {
+                        HStack(alignment: .firstTextBaseline, spacing: AGSpacing.small) {
+                            cardNumeral(
+                                formatRate(network.receivedBytesPerSec),
+                                color: MetricColor.networkDown.token)
+                            cardDelta(rateDeltaCaption(latestDelta(downHistory)))
+                        }
+                        AGNetworkChart(
+                            downSamples: downHistory,
+                            upSamples: upHistory,
+                            downColor: MetricColor.networkDown.token,
+                            upColor: MetricColor.networkUp.token)
                         cardCaption(L("dashboard.card.network.interface", network.interfaceName))
-                        cardMono(networkRatesText(network))
+                        cardCaption(networkRatesText(network))
                     }
-                    AGNetworkChart(downSamples: downHistory, upSamples: upHistory)
                 }
             }
         }
@@ -237,7 +302,7 @@ struct BatteryCard: View {
                         }
                     }
                     HStack(spacing: AGSpacing.medium) {
-                        AGGauge(value: battery.level)
+                        AGGauge(value: battery.level, color: MetricColor.battery.token)
                         VStack(alignment: .leading, spacing: AGSpacing.xxSmall) {
                             cardMono("\(Int(battery.level.rounded()))%")
                             cardCaption(L("dashboard.card.battery.cycles", battery.cycleCount))

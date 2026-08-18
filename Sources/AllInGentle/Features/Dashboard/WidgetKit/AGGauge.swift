@@ -10,12 +10,14 @@ func gaugeProgress(fromPercent value: Double?) -> Double {
 /// Dial-style gauge via SwiftUI's `accessoryCircularCapacity`, spec DW-4.
 public struct AGGauge: View {
     public let value: Double?
+    public let color: Color
 
-    public init(value: Double?) {
+    public init(value: Double?, color: Color = AGColors.accent) {
         self.value = value
+        self.color = color
     }
 
-    public var gaugeColor: Color { AGColors.accent }
+    public var gaugeColor: Color { color }
 
     private var progress: Double { gaugeProgress(fromPercent: value) }
 

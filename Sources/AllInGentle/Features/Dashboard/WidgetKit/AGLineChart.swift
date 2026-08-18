@@ -27,13 +27,15 @@ enum AGWidgetCopy {
 /// History line/area chart for CPU/GPU series, spec DW-1.
 public struct AGLineChart: View {
     public let samples: [MetricSample]
+    public let color: Color
 
-    public init(samples: [MetricSample]) {
+    public init(samples: [MetricSample], color: Color = AGColors.accent) {
         self.samples = samples
+        self.color = color
     }
 
-    public var lineColor: Color { AGColors.accent }
-    public var areaColor: Color { AGColors.accent.opacity(0.15) }
+    public var lineColor: Color { color }
+    public var areaColor: Color { color.opacity(0.15) }
 
     public var body: some View {
         if samples.isEmpty {
@@ -67,12 +69,14 @@ public struct AGLineChart: View {
 /// Compact sparkline for tight spaces, spec DW-1.
 public struct AGMiniChart: View {
     public let samples: [MetricSample]
+    public let color: Color
 
-    public init(samples: [MetricSample]) {
+    public init(samples: [MetricSample], color: Color = AGColors.accent) {
         self.samples = samples
+        self.color = color
     }
 
-    public var lineColor: Color { AGColors.accent }
+    public var lineColor: Color { color }
 
     public var body: some View {
         if samples.isEmpty {

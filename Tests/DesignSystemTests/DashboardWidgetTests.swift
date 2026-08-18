@@ -141,29 +141,33 @@ final class DashboardWidgetTests: XCTestCase {
         XCTAssertNil(chartYDomain([]))
     }
 
-    // MARK: - 2.2 Token-only palette (DW-6)
+    // MARK: - 2.2 Token-only palette (DW-6) + metric-token lockstep (D1)
 
-    func testLineChartColorsResolveFromAGTokens() {
+    // Lockstep with D1: the widget color pins are now expressed as MetricColor
+    // tokens (they resolve to the same AGColors hues) so the palette stays
+    // metric-driven, not shared-accent-driven.
+
+    func testLineChartColorsResolveFromMetricColorCpuToken() {
         let chart = AGLineChart(samples: [])
-        assertColor(chart.lineColor, equalsToken: AGColors.accent)
+        assertColor(chart.lineColor, equalsToken: MetricColor.cpu.token)
     }
 
-    func testLineChartAreaColorIsAccentAtReducedOpacity() {
+    func testLineChartAreaColorIsCpuTokenAtReducedOpacity() {
         let light = NSAppearance(named: .aqua)!
         let area = sRGBComponents(AGLineChart(samples: []).areaColor, under: light)
-        let accent = sRGBComponents(AGColors.accent, under: light)
+        let accent = sRGBComponents(MetricColor.cpu.token, under: light)
         XCTAssertEqual(area.r, accent.r, accuracy: 0.01)
         XCTAssertEqual(area.g, accent.g, accuracy: 0.01)
         XCTAssertEqual(area.b, accent.b, accuracy: 0.01)
         XCTAssertEqual(area.a, 0.15, accuracy: 0.01)
     }
 
-    func testMiniChartColorResolvesFromAGAccent() {
-        assertColor(AGMiniChart(samples: []).lineColor, equalsToken: AGColors.accent)
+    func testMiniChartColorResolvesFromMetricColorCpuToken() {
+        assertColor(AGMiniChart(samples: []).lineColor, equalsToken: MetricColor.cpu.token)
     }
 
-    func testBarChartColorResolvesFromAGStatusLive() {
-        assertColor(AGBarChart(perCoreValues: []).barColor, equalsToken: AGColors.statusLive)
+    func testBarChartColorResolvesFromMetricColorGpuToken() {
+        assertColor(AGBarChart(perCoreValues: []).barColor, equalsToken: MetricColor.gpu.token)
     }
 
     func testMemorySegmentColorsResolveFromAGTokens() {
@@ -173,14 +177,66 @@ final class DashboardWidgetTests: XCTestCase {
         assertColor(memorySegmentColor(.compressed), equalsToken: AGColors.statusDisabled)
     }
 
-    func testGaugeColorResolvesFromAGAccent() {
-        assertColor(AGGauge(value: nil).gaugeColor, equalsToken: AGColors.accent)
+    func testGaugeColorResolvesFromMetricColorCpuToken() {
+        assertColor(AGGauge(value: nil).gaugeColor, equalsToken: MetricColor.cpu.token)
     }
 
-    func testNetworkChartColorsResolveFromAGTokens() {
+    func testNetworkChartColorsResolveFromMetricColorNetworkTokens() {
         let chart = AGNetworkChart(downSamples: [], upSamples: [])
-        assertColor(chart.downColor, equalsToken: AGColors.statusLive)
-        assertColor(chart.upColor, equalsToken: AGColors.statusPlaceholder)
+        assertColor(chart.downColor, equalsToken: MetricColor.networkDown.token)
+        assertColor(chart.upColor, equalsToken: MetricColor.networkUp.token)
+    }
+
+    // MARK: - 3.6 Injected colors (D3): defaults unchanged, injection wins
+
+    func testLineChartAcceptsInjectedColorForLineAndArea() {
+        let chart = AGLineChart(samples: [], color: MetricColor.gpu.token)
+        assertColor(chart.lineColor, equalsToken: MetricColor.gpu.token)
+        let light = NSAppearance(named: .aqua)!
+        let area = sRGBComponents(chart.areaColor, under: light)
+        let injected = sRGBComponents(MetricColor.gpu.token, under: light)
+        XCTAssertEqual(area.r, injected.r, accuracy: 0.01)
+        XCTAssertEqual(area.g, injected.g, accuracy: 0.01)
+        XCTAssertEqual(area.b, injected.b, accuracy: 0.01)
+        XCTAssertEqual(area.a, 0.15, accuracy: 0.01)
+    }
+
+    func testMiniChartAcceptsInjectedColor() {
+        assertColor(
+            AGMiniChart(samples: [], color: MetricColor.ram.token).lineColor,
+            equalsToken: MetricColor.ram.token)
+    }
+
+    func testBarChartAcceptsInjectedColor() {
+        assertColor(
+            AGBarChart(perCoreValues: [], color: MetricColor.cpu.token).barColor,
+            equalsToken: MetricColor.cpu.token)
+    }
+
+    func testGaugeAcceptsInjectedColor() {
+        assertColor(
+            AGGauge(value: nil, color: MetricColor.battery.token).gaugeColor,
+            equalsToken: MetricColor.battery.token)
+    }
+
+    func testNetworkChartAcceptsInjectedColors() {
+        let chart = AGNetworkChart(
+            downSamples: [], upSamples: [],
+            downColor: MetricColor.networkUp.token,
+            upColor: MetricColor.networkDown.token)
+        assertColor(chart.downColor, equalsToken: MetricColor.networkUp.token)
+        assertColor(chart.upColor, equalsToken: MetricColor.networkDown.token)
+    }
+
+    func testMemoryBarAcceptsTintOverrideAndKeepsDefaultSegments() {
+        // Default path (no tint) keeps the per-kind token colors; an injected
+        // tint still renders the breakdown without crashing (DW-3).
+        XCTAssertNotNil(
+            renderedImage(AGMemoryBar(segments: [MemorySegment(kind: .app, bytes: 8)])))
+        XCTAssertNotNil(
+            renderedImage(
+                AGMemoryBar(
+                    segments: [MemorySegment(kind: .app, bytes: 8)], tint: MetricColor.ram.token)))
     }
 
     // MARK: - Helpers

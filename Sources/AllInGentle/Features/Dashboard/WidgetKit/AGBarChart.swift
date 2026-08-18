@@ -14,12 +14,14 @@ func barChartShowsBars(_ values: [Double]) -> Bool {
 /// Per-core usage bars scaled 0...100%, spec DW-2.
 public struct AGBarChart: View {
     public let perCoreValues: [Double]
+    public let color: Color
 
-    public init(perCoreValues: [Double]) {
+    public init(perCoreValues: [Double], color: Color = AGColors.statusLive) {
         self.perCoreValues = perCoreValues
+        self.color = color
     }
 
-    public var barColor: Color { AGColors.statusLive }
+    public var barColor: Color { color }
 
     public var body: some View {
         if barChartShowsBars(perCoreValues) {
