@@ -40,6 +40,8 @@ public struct AGNetworkChart: View {
             }
             .chartYScale(domain: yDomain)
             .frame(height: AGSpacing.xLarge * 3)
+            .animation(.easeOut(duration: 0.25), value: downSamples)
+            .animation(.easeOut(duration: 0.25), value: upSamples)
         }
     }
 }

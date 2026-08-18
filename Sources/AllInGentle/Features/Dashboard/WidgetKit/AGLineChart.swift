@@ -59,6 +59,7 @@ public struct AGLineChart: View {
             }
             .chartYScale(domain: yDomain)
             .frame(height: AGSpacing.xLarge * 3)
+            .animation(.easeOut(duration: 0.25), value: samples)
         }
     }
 }
@@ -94,6 +95,7 @@ public struct AGMiniChart: View {
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
             .frame(height: AGSpacing.xLarge)
+            .animation(.easeOut(duration: 0.25), value: samples)
         }
     }
 }
