@@ -5,14 +5,20 @@ import SwiftUI
 public struct AGNetworkChart: View {
     public let downSamples: [MetricSample]
     public let upSamples: [MetricSample]
+    public let downColor: Color
+    public let upColor: Color
 
-    public init(downSamples: [MetricSample], upSamples: [MetricSample]) {
+    public init(
+        downSamples: [MetricSample],
+        upSamples: [MetricSample],
+        downColor: Color = AGColors.statusLive,
+        upColor: Color = AGColors.statusPlaceholder
+    ) {
         self.downSamples = downSamples
         self.upSamples = upSamples
+        self.downColor = downColor
+        self.upColor = upColor
     }
-
-    public var downColor: Color { AGColors.statusLive }
-    public var upColor: Color { AGColors.statusPlaceholder }
 
     public var body: some View {
         if downSamples.isEmpty && upSamples.isEmpty {

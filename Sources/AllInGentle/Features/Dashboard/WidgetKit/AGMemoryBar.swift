@@ -48,9 +48,11 @@ func memorySegmentColor(_ kind: MemorySegmentKind) -> Color {
 /// Renders a full-width idle bar when there are no segments.
 public struct AGMemoryBar: View {
     public let segments: [MemorySegment]
+    public let tint: Color?
 
-    public init(segments: [MemorySegment]) {
+    public init(segments: [MemorySegment], tint: Color? = nil) {
         self.segments = segments
+        self.tint = tint
     }
 
     public var body: some View {
@@ -62,12 +64,12 @@ public struct AGMemoryBar: View {
             HStack(spacing: spacing) {
                 if segments.isEmpty {
                     Capsule()
-                        .fill(AGColors.statusDisabled)
+                        .fill(tint ?? AGColors.statusDisabled)
                         .frame(width: totalWidth)
                 } else {
                     ForEach(Array(zip(segments, fractions)), id: \.0.id) { segment, fraction in
                         Capsule()
-                            .fill(memorySegmentColor(segment.kind))
+                            .fill(tint ?? memorySegmentColor(segment.kind))
                             .frame(width: totalWidth * fraction)
                     }
                 }
