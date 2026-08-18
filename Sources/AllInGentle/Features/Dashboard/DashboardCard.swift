@@ -10,7 +10,7 @@ public struct DashboardCard<Content: View>: View {
     }
 
     public var body: some View {
-        AGCard {
+        AGCard(padding: AGSpacing.cardPaddingDense) {
             content
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

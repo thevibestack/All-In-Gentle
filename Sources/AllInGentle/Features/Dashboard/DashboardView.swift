@@ -3,7 +3,7 @@ import SwiftUI
 /// Adaptive grid columns for the dashboard (spec DS-3): at least two columns
 /// in a 600pt window, no card below the 280pt minimum.
 func dashboardGridColumns() -> [GridItem] {
-    [GridItem(.adaptive(minimum: 280), spacing: AGSpacing.medium)]
+    [GridItem(.adaptive(minimum: 280), spacing: AGSpacing.gridGapDense)]
 }
 
 /// Home dashboard shell (DS-2/DS-3): NavigationStack → ScrollView →
@@ -35,7 +35,7 @@ struct DashboardGrid: View {
     let viewModel: DashboardViewModel
 
     var body: some View {
-        LazyVGrid(columns: dashboardGridColumns(), alignment: .leading, spacing: AGSpacing.medium) {
+        LazyVGrid(columns: dashboardGridColumns(), alignment: .leading, spacing: AGSpacing.gridGapDense) {
             CPUCard(phase: viewModel.cardPhase(viewModel.cpu), cpu: viewModel.cpu, history: viewModel.cpuHistory)
             RAMCard(phase: viewModel.cardPhase(viewModel.ram), ram: viewModel.ram)
             GPUCard(phase: viewModel.cardPhase(viewModel.gpu), gpu: viewModel.gpu, history: viewModel.gpuHistory)

@@ -18,9 +18,6 @@ struct ChatView: View {
         .onChange(of: appState.selectedProjectPath) { _, new in
             viewModel.projectID = new
         }
-        .onChange(of: appState.globalSearchQuery) { _, new in
-            viewModel.messageSearchQuery = new
-        }
         .task {
             await viewModel.loadSessions()
         }

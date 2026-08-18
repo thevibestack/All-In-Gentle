@@ -19,9 +19,6 @@ struct WikiView: View {
             viewModel.selectedProjectPath = new
             viewModel.loadDocuments(forProjectPath: new)
         }
-        .onChange(of: appState.globalSearchQuery) { _, new in
-            viewModel.searchQuery = new
-        }
     }
 
     private var sidebar: some View {
