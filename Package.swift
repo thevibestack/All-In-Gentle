@@ -77,6 +77,11 @@ let package = Package(
             path: "Tests/DesignSystemTests"
         ),
         .testTarget(
+            name: "DashboardTests",
+            dependencies: ["AllInGentleKit"],
+            path: "Tests/DashboardTests"
+        ),
+        .testTarget(
             name: "SettingsTests",
             dependencies: ["AllInGentleKit", "AllInGentleTestSupport"],
             path: "Tests/SettingsTests"
