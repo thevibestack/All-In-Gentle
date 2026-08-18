@@ -36,14 +36,23 @@ struct DashboardGrid: View {
 
     var body: some View {
         LazyVGrid(columns: dashboardGridColumns(), alignment: .leading, spacing: AGSpacing.gridGapDense) {
-            CPUCard(phase: viewModel.cardPhase(viewModel.cpu), cpu: viewModel.cpu, history: viewModel.cpuHistory)
-            RAMCard(phase: viewModel.cardPhase(viewModel.ram), ram: viewModel.ram)
-            GPUCard(phase: viewModel.cardPhase(viewModel.gpu), gpu: viewModel.gpu, history: viewModel.gpuHistory)
+            CPUCard(
+                phase: viewModel.cardPhase(viewModel.cpu),
+                cpu: viewModel.cpu,
+                history: viewModel.displayedSeries(viewModel.cpuHistory))
+            RAMCard(
+                phase: viewModel.cardPhase(viewModel.ram),
+                ram: viewModel.ram,
+                history: viewModel.displayedSeries(viewModel.ramHistory))
+            GPUCard(
+                phase: viewModel.cardPhase(viewModel.gpu),
+                gpu: viewModel.gpu,
+                history: viewModel.displayedSeries(viewModel.gpuHistory))
             NetworkCard(
                 phase: viewModel.cardPhase(viewModel.network),
                 network: viewModel.network,
-                downHistory: viewModel.networkDownHistory,
-                upHistory: viewModel.networkUpHistory
+                downHistory: viewModel.displayedSeries(viewModel.networkDownHistory),
+                upHistory: viewModel.displayedSeries(viewModel.networkUpHistory)
             )
             if batteryCardVisible(viewModel.battery) {
                 BatteryCard(battery: viewModel.battery)
