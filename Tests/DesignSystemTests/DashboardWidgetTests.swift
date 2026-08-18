@@ -43,6 +43,21 @@ final class DashboardWidgetTests: XCTestCase {
         XCTAssertNotNil(renderedImage(AGNetworkChart(downSamples: [sample(10)], upSamples: [sample(20)])))
     }
 
+    // MARK: - 2.1 Animated tails (spec D4): multi-sample series render no-crash
+
+    func testAnimatedLineChartRendersFullDisplayWindowWithoutCrash() {
+        XCTAssertNotNil(renderedImage(AGLineChart(samples: samples(1...60))))
+    }
+
+    func testAnimatedMiniChartRendersFullDisplayWindowWithoutCrash() {
+        XCTAssertNotNil(renderedImage(AGMiniChart(samples: samples(1...60))))
+    }
+
+    func testAnimatedNetworkChartRendersDualFullWindowSeriesWithoutCrash() {
+        XCTAssertNotNil(
+            renderedImage(AGNetworkChart(downSamples: samples(1...60), upSamples: samples(61...120))))
+    }
+
     // MARK: - 2.1 Shared Y-domain logic (empty state, no divide-by-zero)
 
     func testChartYDomainIsNilWhenSeriesIsEmpty() {
@@ -172,6 +187,11 @@ final class DashboardWidgetTests: XCTestCase {
 
     private func sample(_ value: Double) -> MetricSample {
         MetricSample(value: value)
+    }
+
+    /// A monotonically increasing series, mimicking a ticked history buffer.
+    private func samples(_ values: ClosedRange<Int>) -> [MetricSample] {
+        values.map { MetricSample(value: Double($0)) }
     }
 
     /// Evaluates a SwiftUI body into an offscreen image. `nil` means the body
