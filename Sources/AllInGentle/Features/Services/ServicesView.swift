@@ -9,9 +9,6 @@ struct ServicesView: View {
             content
                 .navigationTitle(L("services.title"))
                 .task { await viewModel.poll() }
-                .onChange(of: appState.globalSearchQuery) { _, new in
-                    viewModel.searchQuery = new
-                }
         }
     }
 

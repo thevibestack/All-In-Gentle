@@ -97,16 +97,6 @@ struct RootView: View {
                 .accessibilityLabel(L(appState.sidebarCollapsed ? "shell.showSidebar" : "shell.hideSidebar"))
                 .accessibilityIdentifier("shell.toolbar.toggleSidebar")
             }
-
-            ToolbarItem(placement: .primaryAction) {
-                AGSearchField(
-                    text: binding(for: \.globalSearchQuery),
-                    isFocused: binding(for: \.searchFocused),
-                    placeholderKey: "shell.search.placeholder"
-                )
-                .frame(minWidth: 180, idealWidth: 240, maxWidth: 320)
-                .accessibilityIdentifier("shell.searchField")
-            }
         }
     }
 
@@ -114,7 +104,7 @@ struct RootView: View {
         List(AppState.AppTab.allCases, selection: selectedItemBinding) { item in
             Label(item.title, systemImage: item.icon)
                 .tag(item)
-                .padding(.vertical, AGSpacing.xSmall)
+                .padding(.vertical, AGSpacing.sidebarRowPaddingDense)
                 .accessibilityIdentifier("sidebar.\(item.rawValue)")
         }
         .listStyle(.sidebar)
@@ -145,13 +135,6 @@ struct RootView: View {
         Binding(
             get: { appState.selectedItem },
             set: { appState.selectedItem = $0 ?? .dashboard }
-        )
-    }
-
-    private func binding<T>(for keyPath: ReferenceWritableKeyPath<AppState, T>) -> Binding<T> {
-        Binding(
-            get: { appState[keyPath: keyPath] },
-            set: { appState[keyPath: keyPath] = $0 }
         )
     }
 }

@@ -18,10 +18,8 @@ public final class AppState {
         }
     }
 
-    /// Global search query bound to the toolbar search field.
-    public var globalSearchQuery: String = ""
-
-    /// Whether the global search field should be focused (e.g. after ⌘K).
+    /// Whether the Projects tab's local search field should be focused
+    /// (e.g. after ⌘K; no-op when the Projects tab is inactive).
     public var searchFocused: Bool = false
 
     /// Sidebar visibility for the `NavigationSplitView` shell.
