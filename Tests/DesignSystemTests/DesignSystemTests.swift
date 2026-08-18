@@ -103,6 +103,15 @@ final class DesignSystemTests: XCTestCase {
         )
     }
 
+    // MARK: - Dense spacing tokens (density)
+
+    func testDenseSpacingTokensMatchSpecValues() {
+        // Spec: card padding 12–14, grid gap == 12, sidebar row padding 4–6.
+        XCTAssertEqual(AGSpacing.cardPaddingDense, 12)
+        XCTAssertEqual(AGSpacing.gridGapDense, 12)
+        XCTAssertEqual(AGSpacing.sidebarRowPaddingDense, 4)
+    }
+
     // MARK: - Helpers
 
     /// Resolves a SwiftUI `Color` token as sRGB under a specific appearance by

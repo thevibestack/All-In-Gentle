@@ -40,4 +40,13 @@ public enum AGSpacing {
     public static let buttonPaddingVertical: CGFloat = xSmall
     public static let badgePaddingHorizontal: CGFloat = 6
     public static let badgePaddingVertical: CGFloat = 2
+
+    // MARK: - Dense scale (Stats-style dashboard)
+
+    /// Tighter card padding for the dashboard grid (spec: 12–14).
+    public static let cardPaddingDense: CGFloat = 12
+    /// Tighter dashboard grid gap (spec: == 12).
+    public static let gridGapDense: CGFloat = 12
+    /// Tighter sidebar row padding for the dense shell (spec: 4–6).
+    public static let sidebarRowPaddingDense: CGFloat = 4
 }
